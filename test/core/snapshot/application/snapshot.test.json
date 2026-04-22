@@ -1,0 +1,55 @@
+{
+  "averageSkipRate": 0.1,
+  "averageStakeWeightedSkipRate": 0.21,
+  "stakeByVersion": {
+    "3.1.7": {
+      "currentActiveStake": "100000",
+      "currentValidators": 2,
+      "delinquentActiveStake": "0",
+      "delinquentValidators": 0
+    },
+    "4.0.0": {
+      "currentActiveStake": "200000",
+      "currentValidators": 7,
+      "delinquentActiveStake": "1200",
+      "delinquentValidators": 1
+    },
+    "unknown": {
+      "currentActiveStake": "0",
+      "currentValidators": 0,
+      "delinquentActiveStake": "50551485375658",
+      "delinquentValidators": 14
+    }
+  },
+  "totalActiveStake": "300000",
+  "totalCurrentStake": "200000",
+  "totalDelinquentStake": "100",
+  "validators": [
+    {
+      "activatedStake": "1000",
+      "commission": 10,
+      "credits": 50,
+      "delinquent": false,
+      "epochCredits": 50,
+      "identityPubkey": "puffinQSvKFriPbyE5atyx1ptfnyytovbzxybr1jsyy",
+      "lastVote": 10,
+      "rootSlot": 10,
+      "skipRate": 0,
+      "version": "4.0.0",
+      "voteAccountPubkey": "PUFFiNkUHF2DMfbKeUcYTSQckDDtkswfxZCDv5WQqwp"
+    },
+    {
+      "activatedStake": "2000",
+      "commission": 0,
+      "credits": 100,
+      "delinquent": true,
+      "epochCredits": 100,
+      "identityPubkey": "7pR7t5axFfkg2VZB1uAuFNUvpAeowq2v15J4gw5MmHTB",
+      "lastVote": 10,
+      "rootSlot": 10,
+      "skipRate": 0,
+      "version": "3.1.7",
+      "voteAccountPubkey": "59k9CiZ7L1bpEivLrAtaMPMgw18syZ4RQsJUo3hbbj8x"
+    }
+  ]
+}

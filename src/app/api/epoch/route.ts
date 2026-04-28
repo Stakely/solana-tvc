@@ -6,7 +6,8 @@ export const runtime = 'nodejs';
 
 export async function GET() {
   const query = Factory.EpochQuery();
-  const appService = new GetEpoch(query);
+  const freshener = Factory.EpochFreshener();
+  const appService = new GetEpoch(query, freshener);
 
   return ArchResponse.handleJsonResponse(appService, {});
 }

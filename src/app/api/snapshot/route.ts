@@ -23,7 +23,10 @@ export async function GET(req: Request) {
   };
 
   const query = Factory.SnapshotQuery();
-  const appService = new GetSnapshot(query);
+  const refresher = Factory.ValidatorSnapshotFreshener();
+  const infoRefresher = Factory.ValidatorInfoFreshener();
+
+  const appService = new GetSnapshot(query, refresher, infoRefresher);
 
   return ArchResponse.handleJsonResponse(appService, args);
 }

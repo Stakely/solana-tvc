@@ -8,7 +8,7 @@ export class EpochFreshener {
   private readonly _epochFilePath: string;
   private readonly _ttlMs: number;
 
-  private _refreshing: Promise<void> | null = null;
+  private _refreshing: boolean = false;
 
   constructor(_solanaCli: SolanaCli, _publicDir: string, _ttlMs: number) {
     this._solanaCli = _solanaCli;
@@ -25,16 +25,13 @@ export class EpochFreshener {
     }
 
     if (!this._refreshing) {
+      this._refreshing = true;
       const stdout = await this._solanaCli.epochInfo();
-      this._refreshing = FileManager.refresh(
-        this._publicDir,
-        this._epochFilePath,
-        stdout
-      ).finally(() => {
-        this._refreshing = null;
-      });
+      FileManager.refresh(this._publicDir, this._epochFilePath, stdout).finally(
+        () => {
+          this._refreshing = false;
+        }
+      );
     }
-
-    await this._refreshing;
   }
 }

@@ -10,7 +10,7 @@ import { PaginatorReducer } from '@/core/snapshot/domain/reducer/PaginatorReduce
 import { ValidatorInfoParser } from '@/core/snapshot/domain/ValidatorInfoParser.ts';
 import { ValidatorSnapshotFreshener } from '@/core/snapshot/domain/ValidatorSnapshotFreshener.ts';
 import { SolanaCli } from '@/core/solana/SolanaCli.ts';
-import { EpochFreshener } from '@/core/epoch/domain/SnapshotFreshener.ts';
+import { EpochFreshener } from '@/core/epoch/domain/EpochFreshener.ts';
 import { ValidatorInfoFreshener } from '@/core/snapshot/domain/ValidatorInfoFreshener.ts';
 
 export class Factory {

@@ -8,7 +8,7 @@ export class ValidatorSnapshotFreshener {
   private readonly _snapshotPath: string;
   private readonly _ttlMs: number;
 
-  private _refreshing: Promise<void> | null = null;
+  private _refreshing: boolean = false;
 
   constructor(_solanaCli: SolanaCli, _publicDir: string, _ttlMs: number) {
     this._solanaCli = _solanaCli;
@@ -25,16 +25,13 @@ export class ValidatorSnapshotFreshener {
     }
 
     if (!this._refreshing) {
+      this._refreshing = true;
       const stdout = await this._solanaCli.validators();
-      this._refreshing = FileManager.refresh(
-        this._publicDir,
-        this._snapshotPath,
-        stdout
-      ).finally(() => {
-        this._refreshing = null;
-      });
+      FileManager.refresh(this._publicDir, this._snapshotPath, stdout).finally(
+        () => {
+          this._refreshing = false;
+        }
+      );
     }
-
-    await this._refreshing;
   }
 }

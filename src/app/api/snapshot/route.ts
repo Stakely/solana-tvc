@@ -5,6 +5,12 @@ import { ArchResponse } from '@/core/arch';
 
 export const runtime = 'nodejs';
 
+const query = Factory.SnapshotQuery();
+const refresher = Factory.ValidatorSnapshotFreshener();
+const infoRefresher = Factory.ValidatorInfoFreshener();
+
+const appService = new GetSnapshot(query, refresher, infoRefresher);
+
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const orderDirection = url.searchParams.get('orderDirection');
@@ -21,12 +27,6 @@ export async function GET(req: Request) {
     page: page ? Number(page) : undefined,
     publicKey: identity ?? undefined,
   };
-
-  const query = Factory.SnapshotQuery();
-  const refresher = Factory.ValidatorSnapshotFreshener();
-  const infoRefresher = Factory.ValidatorInfoFreshener();
-
-  const appService = new GetSnapshot(query, refresher, infoRefresher);
 
   return ArchResponse.handleJsonResponse(appService, args);
 }

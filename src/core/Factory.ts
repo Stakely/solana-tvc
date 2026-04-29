@@ -8,6 +8,10 @@ import { OrderReducer } from '@/core/snapshot/domain/reducer/OrderReducer.ts';
 import { FilterReducer } from '@/core/snapshot/domain/reducer/FilterReducer.ts';
 import { PaginatorReducer } from '@/core/snapshot/domain/reducer/PaginatorReducer.ts';
 import { ValidatorInfoParser } from '@/core/snapshot/domain/ValidatorInfoParser.ts';
+import { ValidatorSnapshotFreshener } from '@/core/snapshot/domain/ValidatorSnapshotFreshener.ts';
+import { SolanaCli } from '@/core/solana/SolanaCli.ts';
+import { EpochFreshener } from '@/core/epoch/domain/EpochFreshener.ts';
+import { ValidatorInfoFreshener } from '@/core/snapshot/domain/ValidatorInfoFreshener.ts';
 
 export class Factory {
   static SnapshotParser(): SnapshotParser {
@@ -43,5 +47,39 @@ export class Factory {
 
   static EpochQuery(): EpochQuery {
     return new EpochQuery(Factory.EpochParser());
+  }
+
+  static SolanaCli(): SolanaCli {
+    const rpcUrls = process.env.RPC_URLS?.split(',') ?? [
+      'https://api.mainnet-beta.solana.com',
+    ];
+    return new SolanaCli(rpcUrls);
+  }
+
+  static ValidatorSnapshotFreshener(): ValidatorSnapshotFreshener {
+    const publicPath = path.join(process.cwd(), 'public');
+    const solanaCli = Factory.SolanaCli();
+    const ttl = process.env.SNAPSHOT_FILE_TTL
+      ? parseInt(process.env.SNAPSHOT_FILE_TTL)
+      : 50;
+    return new ValidatorSnapshotFreshener(solanaCli, publicPath, ttl);
+  }
+
+  static ValidatorInfoFreshener(): ValidatorInfoFreshener {
+    const publicPath = path.join(process.cwd(), 'public');
+    const solanaCli = Factory.SolanaCli();
+    const ttl = process.env.VALIDATOR_INFO_FILE_TTL
+      ? parseInt(process.env.VALIDATOR_INFO_FILE_TTL)
+      : 24 * 60 * 60 * 1000;
+    return new ValidatorInfoFreshener(solanaCli, publicPath, ttl);
+  }
+
+  static EpochFreshener(): EpochFreshener {
+    const publicPath = path.join(process.cwd(), 'public');
+    const solanaCli = Factory.SolanaCli();
+    const ttl = process.env.EPOCH_FILE_TTL
+      ? parseInt(process.env.EPOCH_FILE_TTL)
+      : 5000;
+    return new EpochFreshener(solanaCli, publicPath, ttl);
   }
 }

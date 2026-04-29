@@ -6,13 +6,24 @@ import {
   SnapshotQueryFilter,
   SnapshotQueryOrder,
 } from '@/core/snapshot/domain/SnapshotQueryArgs.ts';
+import { ValidatorSnapshotFreshener } from '@/core/snapshot/domain/ValidatorSnapshotFreshener.ts';
+import { ValidatorInfoFreshener } from '@/core/snapshot/domain/ValidatorInfoFreshener.ts';
 
 export class GetSnapshot extends ApplicationService {
-  constructor(private readonly _query: SnapshotQuery) {
+  constructor(
+    private readonly _query: SnapshotQuery,
+    private readonly _freshener: ValidatorSnapshotFreshener,
+    private readonly _infoFreshener: ValidatorInfoFreshener
+  ) {
     super();
   }
 
   protected async _doExec(args: GetSnapshotArgs): Promise<GetSnapshotResponse> {
+    Promise.all([
+      this._freshener.ensureFresh(),
+      this._infoFreshener.ensureFresh(),
+    ]);
+
     const order: SnapshotQueryOrder = {
       criteria: 'credits',
       direction: 'desc',

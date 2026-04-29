@@ -77,7 +77,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     };
 
     tick();
-    const id = setInterval(tick, 1000);
+    const id = setInterval(tick, 500);
 
     return () => {
       cancelled = true;

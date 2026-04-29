@@ -1,7 +1,7 @@
 import { ApplicationService } from '@/core/arch';
 import { EpochQuery } from '@/core/epoch/domain/EpochQuery.ts';
 import { GetEpochResponse } from '@/types/epoch.ts';
-import { EpochFreshener } from '@/core/epoch/domain/SnapshotFreshener.ts';
+import { EpochFreshener } from '@/core/epoch/domain/EpochFreshener.ts';
 
 export class GetEpoch extends ApplicationService {
   constructor(

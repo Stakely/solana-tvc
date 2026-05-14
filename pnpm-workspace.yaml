@@ -1,0 +1,6 @@
+allowBuilds:
+  sharp: true
+  unrs-resolver: true
+minimumReleaseAge: 4320
+minimumReleaseAgeIgnoreMissingTime: false
+resolutionMode: highest

@@ -2,6 +2,9 @@
 
 FROM node:24-bookworm-slim AS base
 
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+ENV CI=true
+
 ARG RPC_URLS
 ENV RPC_URLS=$RPC_URLS
 
@@ -27,11 +30,15 @@ ENV PATH="/root/.local/share/solana/install/active_release/bin:${PATH}"
 RUN ln -sf /root/.local/share/solana/install/active_release/bin/solana /usr/local/bin/solana \
  && solana --version
 
+RUN corepack enable \
+  && corepack prepare pnpm@11.0.3 --activate \
+  && pnpm --version
 # ---------------- deps ----------------
 FROM base AS deps
 WORKDIR /app
 
-COPY package.json yarn.lock ./
+COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
+RUN pnpm install --frozen-lockfile
 
 # ---------------- builder ----------------
 FROM base AS builder
@@ -41,7 +48,7 @@ RUN corepack enable
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
-RUN yarn build
+RUN pnpm build
 
 # ---------------- runner ----------------
 FROM base AS runner

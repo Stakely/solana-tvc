@@ -2,6 +2,7 @@
   "name": "solana-live-tvc",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.1.2+sha512.415a1cc25974731e75455c1468371be74c5aa5fb7621b50d4056d222451609f11412f23fd602e6169f1e060466641f798597e1be961a10688836a67b16569499",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -10,13 +11,13 @@
     "test": "jest",
     "format": "prettier --write .",
     "lint:fix": "eslint . --fix",
-    "cs:fix": "yarn format && yarn lint:fix"
+    "cs:fix": "pnpm format && pnpm lint:fix"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@emotion/styled": "^11.14.1",
     "@mui/material": "^7.3.6",
-    "next": "16.2.6",
+    "next": "16.2.12",
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
@@ -30,11 +31,11 @@
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
     "eslint": "9.39.4",
-    "eslint-config-next": "16.2.6",
+    "eslint-config-next": "16.2.12",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.5",
-    "jest": "^30.3.0",
-    "jest-environment-jsdom": "^30.3.0",
+    "jest": "^30.4.2",
+    "jest-environment-jsdom": "^30.4.1",
     "prettier": "^3.8.1",
     "ts-node": "^10.9.2",
     "typescript": "^5"

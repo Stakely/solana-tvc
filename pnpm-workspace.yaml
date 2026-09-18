@@ -1,9 +1,22 @@
 allowBuilds:
   sharp: true
   unrs-resolver: true
+  # DENEGADO. Su script `install` es scripts/build-from-source.js, un fallback
+  # que solo compila si no hay binario para la plataforma; publica 12 binarios
+  # precompilados via optionalDependencies (darwin/linux/win32, x64 y arm64),
+  # asi que en cualquier plataforma soportada el script es redundante. Mismo
+  # criterio que esbuild/unrs-resolver en genlayer-leaderboard.
+  '@parcel/watcher': false
 overrides:
   postcss: 8.5.25
-  sharp: 0.35.3
+  # GHSA-rgj7-g3m4-5g8c — CVEs de libvips. 0.35.4 es la primera parcheada.
+  sharp: 0.35.4
+  # GHSA-2v37-7h3g-55p8 — nanoid con entrada no entera. Solo transitiva.
+  nanoid@3: ^3.3.18
+  # GHSA-2883-xcg3-v3hh — CPU cuadratico via merge keys de YAML. Dev-only
+  # (eslint). Un override por linea major: la 3.x y la 4.x no son compatibles.
+  js-yaml@3: ^3.15.2
+  js-yaml@4: ^4.3.2
 minimumReleaseAge: 4320
 minimumReleaseAgeIgnoreMissingTime: false
 resolutionMode: highest

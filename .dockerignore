@@ -1,0 +1,8 @@
+# Keep local state out of the build context: dependencies are installed fresh
+# from the lockfile, and env files may hold real keys.
+node_modules
+.next
+.swc
+.env
+.env.*
+!.env.example

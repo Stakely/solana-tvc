@@ -31,12 +31,14 @@ RUN ln -sf /root/.local/share/solana/install/active_release/bin/solana /usr/loca
  && solana --version
 
 RUN corepack enable \
-  && corepack prepare pnpm@11.0.3 --activate \
+  && corepack prepare pnpm@11.1.2 --activate \
   && pnpm --version
 # ---------------- deps ----------------
 FROM base AS deps
 WORKDIR /app
 
+# pnpm-workspace.yaml carries the quarantine window and the allowBuilds
+# verdicts, so it has to be there before the install.
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 RUN pnpm install --frozen-lockfile
 

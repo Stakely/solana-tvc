@@ -9,6 +9,8 @@ import path from 'path';
 import { GetSnapshotArgs, GetSnapshotResponse } from '@/types/snapshot.ts';
 import { Factory } from '@/core/Factory.ts';
 import { ValidatorInfoParser } from '@/core/snapshot/domain/ValidatorInfoParser.ts';
+import { ValidatorSnapshotFreshener } from '@/core/snapshot/domain/ValidatorSnapshotFreshener.ts';
+import { ValidatorInfoFreshener } from '@/core/snapshot/domain/ValidatorInfoFreshener.ts';
 
 describe('Get Snapshot test', () => {
   let sut: (args: GetSnapshotArgs) => Promise<GetSnapshotResponse>;
@@ -30,7 +32,16 @@ describe('Get Snapshot test', () => {
     const reducer = Factory.SnapshotReducer();
     const query = new SnapshotQuery(parser, validatorInfoParser, reducer);
 
-    const appService = new GetSnapshot(query);
+    // Igual que en GetEpoch: fixtures locales, así que los fresheners —que
+    // llaman a la CLI de Solana y reescriben public/— son dobles inertes.
+    const noopFreshener = () => ({
+      ensureFresh: jest.fn<Promise<void>, []>().mockResolvedValue(undefined),
+    });
+    const appService = new GetSnapshot(
+      query,
+      noopFreshener() as unknown as ValidatorSnapshotFreshener,
+      noopFreshener() as unknown as ValidatorInfoFreshener
+    );
     sut = ((args: GetSnapshotArgs) => appService.exec(args)) as (
       args: GetSnapshotArgs
     ) => Promise<GetSnapshotResponse>;

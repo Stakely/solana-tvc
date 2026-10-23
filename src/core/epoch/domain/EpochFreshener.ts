@@ -18,20 +18,20 @@ export class EpochFreshener {
   }
 
   async ensureFresh(): Promise<void> {
-    const fresh = await FileManager.isFresh(this._epochFilePath, this._ttlMs);
-
-    if (fresh) {
+    if (this._refreshing) {
       return;
     }
-
-    if (!this._refreshing) {
-      this._refreshing = true;
+    this._refreshing = true;
+    try {
+      if (await FileManager.isFresh(this._epochFilePath, this._ttlMs)) {
+        return;
+      }
       const stdout = await this._solanaCli.epochInfo();
-      FileManager.refresh(this._publicDir, this._epochFilePath, stdout).finally(
-        () => {
-          this._refreshing = false;
-        }
-      );
+      await FileManager.refresh(this._publicDir, this._epochFilePath, stdout);
+    } catch (error) {
+      console.error('epoch info refresh failed', error);
+    } finally {
+      this._refreshing = false;
     }
   }
 }

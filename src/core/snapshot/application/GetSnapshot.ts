@@ -22,7 +22,7 @@ export class GetSnapshot extends ApplicationService {
     Promise.all([
       this._freshener.ensureFresh(),
       this._infoFreshener.ensureFresh(),
-    ]);
+    ]).catch((error) => console.error('snapshot refresh failed', error));
 
     const order: SnapshotQueryOrder = {
       criteria: 'credits',

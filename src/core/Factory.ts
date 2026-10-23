@@ -12,6 +12,13 @@ import { ValidatorSnapshotFreshener } from '@/core/snapshot/domain/ValidatorSnap
 import { SolanaCli } from '@/core/solana/SolanaCli.ts';
 import { EpochFreshener } from '@/core/epoch/domain/EpochFreshener.ts';
 import { ValidatorInfoFreshener } from '@/core/snapshot/domain/ValidatorInfoFreshener.ts';
+import { SnapshotSource } from '@/core/snapshot/domain/SnapshotSource.ts';
+import { MEASURE } from '@/core/measure/domain/Constants.ts';
+
+// One instance per process, shared by every route bundle (spec §4.1).
+type Shared = { source?: SnapshotSource };
+const shared = globalThis as typeof globalThis & { __solanaTvc?: Shared };
+const singletons = (): Shared => (shared.__solanaTvc ??= {});
 
 export class Factory {
   static SnapshotParser(): SnapshotParser {
@@ -49,20 +56,41 @@ export class Factory {
     return new EpochQuery(Factory.EpochParser());
   }
 
+  static rpcUrls(): string[] {
+    const urls = (process.env.RPC_URLS ?? '')
+      .split(',')
+      .map((url) => url.trim())
+      .filter(Boolean);
+    return urls.length ? urls : ['https://api.mainnet-beta.solana.com'];
+  }
+
   static SolanaCli(): SolanaCli {
-    const rpcUrls = process.env.RPC_URLS?.split(',') ?? [
-      'https://api.mainnet-beta.solana.com',
-    ];
-    return new SolanaCli(rpcUrls);
+    return new SolanaCli(Factory.rpcUrls());
+  }
+
+  // SNAPSHOT_FILE_TTL in ms, default 5,000, kept within [3,000, 10,000].
+  static snapshotTtlMs(): number {
+    const ttl = parseInt(process.env.SNAPSHOT_FILE_TTL ?? '', 10);
+    return Number.isFinite(ttl)
+      ? Math.min(
+          MEASURE.snapshotTtlMaxMs,
+          Math.max(MEASURE.snapshotTtlMinMs, ttl)
+        )
+      : MEASURE.snapshotTtlMs;
+  }
+
+  static SnapshotSource(): SnapshotSource {
+    return (singletons().source ??= new SnapshotSource(
+      Factory.SolanaCli(),
+      path.join(process.cwd(), 'public')
+    ));
   }
 
   static ValidatorSnapshotFreshener(): ValidatorSnapshotFreshener {
-    const publicPath = path.join(process.cwd(), 'public');
-    const solanaCli = Factory.SolanaCli();
-    const ttl = process.env.SNAPSHOT_FILE_TTL
-      ? parseInt(process.env.SNAPSHOT_FILE_TTL)
-      : 50;
-    return new ValidatorSnapshotFreshener(solanaCli, publicPath, ttl);
+    return new ValidatorSnapshotFreshener(
+      Factory.SnapshotSource(),
+      Factory.snapshotTtlMs()
+    );
   }
 
   static ValidatorInfoFreshener(): ValidatorInfoFreshener {

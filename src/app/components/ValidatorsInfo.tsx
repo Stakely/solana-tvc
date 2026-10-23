@@ -295,7 +295,7 @@ type OrderSelectorProps = {
   value: OrderCriteria;
   // The whole selector (migration epoch).
   disabled: boolean;
-  // Orders the server can rank with the current snapshot (B4).
+  // Orders the server can rank with the current snapshot.
   available: (criteria: OrderCriteria) => boolean;
   isMobile: boolean;
   onChange: (criteria: OrderCriteria) => void;

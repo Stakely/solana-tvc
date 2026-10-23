@@ -75,7 +75,7 @@ const underReview = () =>
     { status: 'measuring', last5m: null, recent: [] }
   );
 
-// The session's first response only marks where the session starts (B3):
+// The session's first response only marks where the session starts:
 // the windows it brings ended before the monitor opened. A server with no
 // windows yet sends none.
 const noWindowsYet = () => measureResponse({}, { recent: [] });

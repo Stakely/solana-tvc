@@ -1,3 +1,5 @@
+import { EpochRatioState, ValidatorInclusion } from '@/types/measure.ts';
+
 export type Lamports = string;
 
 export type StakeByVersionStats = {
@@ -21,6 +23,9 @@ export type ValidatorSnapshot = {
   voteAccountPubkey: string;
   info?: ValidatorInfo;
   ranking?: number;
+  epochRatio?: number | null;
+  epochRatioState?: EpochRatioState;
+  inclusion?: ValidatorInclusion;
 };
 
 export type Snapshot = {

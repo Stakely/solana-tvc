@@ -3,7 +3,7 @@
 import React, { FC, ReactNode, useState } from 'react';
 import { Pagination, PaginationItem } from '@mui/material';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
-import { Icon } from '@/app/components';
+import { Icon } from '@/app/components/ui/Icon.tsx';
 
 type PaginatorProps = {
   /**

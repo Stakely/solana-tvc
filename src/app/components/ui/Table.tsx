@@ -4,7 +4,11 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import { Percentage, Pixel } from '@/app/components/utils/Measures.ts';
 import { useIsMobile } from '@/app/hooks';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
-import { Accordion, Divider, Icon, Surface, Text } from '@/app/components';
+import { Accordion } from '@/app/components/ui/Accordion.tsx';
+import { Divider } from '@/app/components/ui/Divider.tsx';
+import { Icon } from '@/app/components/ui/Icon.tsx';
+import { Surface } from '@/app/components/ui/Surface.tsx';
+import { Text } from '@/app/components/ui/Text.tsx';
 
 export type TableColumn<T> = {
   /**

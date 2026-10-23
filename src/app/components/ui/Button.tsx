@@ -5,7 +5,8 @@ import { Icon as IconName } from '../assets/icons';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
 import { getRgb } from '@/app/components/theme/design-system.ts';
 import { Button as MUIButton, ClickAwayListener, Tooltip } from '@mui/material';
-import { Icon, Spinner } from '@/app/components';
+import { Icon } from '@/app/components/ui/Icon.tsx';
+import { Spinner } from '@/app/components/ui/Spinner.tsx';
 
 export type ButtonProps = {
   /** The message inside the button */

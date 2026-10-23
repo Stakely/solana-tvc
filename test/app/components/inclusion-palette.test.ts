@@ -10,53 +10,20 @@ import {
   toneOf,
   toneStyle,
 } from '@/app/components/inclusion-palette.ts';
+import {
+  Rgb,
+  contrast,
+  over,
+  paint,
+  stripePaint,
+} from '../support/contrast.ts';
 import { inclusionWindow } from '../support/fixtures.tsx';
 
 const colors = StakelyTheme.colors;
 
-type Rgb = [number, number, number];
-type Paint = { rgb: Rgb; alpha: number };
-
-// A #rrggbb colour, or the first rgba() of a CSS value: for a hatch, the
-// colour of its stripes (the gaps between them are transparent).
-function paint(css: unknown): Paint {
-  const value = String(css).replace(/\s/g, '');
-  const hex = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(value);
-  if (hex) {
-    const [r, g, b] = hex.slice(1).map((part) => parseInt(part, 16));
-    return { rgb: [r, g, b], alpha: 1 };
-  }
-  const rgba = /rgba\(([\d.]+),([\d.]+),([\d.]+),([\d.]+)\)/.exec(value);
-  if (!rgba) throw new Error(`No colour in ${value}`);
-  const [r, g, b, alpha] = rgba.slice(1).map(Number);
-  return { rgb: [r, g, b], alpha };
-}
-
-// Paints a colour over an opaque one, blending in sRGB as browsers do.
-function over(base: Rgb, { rgb, alpha }: Paint): Rgb {
-  const [r, g, b] = base.map(
-    (value, i) => rgb[i] * alpha + value * (1 - alpha)
-  );
-  return [r, g, b];
-}
-
-// WCAG 2.x relative luminance and contrast ratio of opaque colours.
-function luminance(rgb: Rgb): number {
-  const [r, g, b] = rgb.map((value) => {
-    const c = value / 255;
-    return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
-  });
-  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
-}
-
-function contrast(one: Rgb, other: Rgb): number {
-  const [a, b] = [luminance(one), luminance(other)];
-  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
-}
-
 // Contrast of the stripes of a hatch against the colour under them.
-const stripeContrast = (base: Rgb, hatch: unknown): number =>
-  contrast(over(base, paint(hatch)), base);
+const stripeContrast = (base: Rgb, hatch: string | undefined): number =>
+  contrast(over(base, stripePaint(hatch)), base);
 
 // The bars sit on the graph's rgba(0,0,0,0.25) (ValidatorDeltaGraph today,
 // InclusionGraph next), over a dark page colour.

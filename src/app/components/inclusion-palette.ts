@@ -4,7 +4,7 @@ import { InclusionWindow } from '@/types/measure.ts';
 import { LegendTone } from '@/app/components/measure-texts.ts';
 
 // Colours of the monitor (spec §6.2), shared by the bars, the legend, the
-// tooltips and the tests.
+// tooltips, the status chips and the tests.
 export const LEADER_COLOR = '#9945FF';
 export const NOT_MEASURED_COLOR = 'rgba(255,255,255,0.35)';
 export const OUTLINE = `1px solid ${NOT_MEASURED_COLOR}`;
@@ -17,6 +17,13 @@ export const TRACK_HATCH =
   'repeating-linear-gradient(45deg, rgba(255,255,255,0.45) 0 3px, transparent 3px 6px)';
 // The empty part of a bar (the track above the fill).
 export const TRACK_COLOR = 'rgba(255,255,255,0.10)';
+// The status chips paint their own opaque background, so their labels
+// (13 px bold, not large text) keep WCAG AA contrast, 4.5:1, whatever lies
+// behind them: the table surface, the mobile cards or the page gradient behind
+// the monitor header. On it, "Not measurable" is an opaque grey:
+// NOT_MEASURED_COLOR, the grey of the bars, would only reach about 3:1.
+export const STATUS_CHIP_BACKGROUND = '#000000';
+export const NOT_MEASURABLE_TEXT_COLOR = '#999999';
 
 export type BarTone = Exclude<LegendTone, 'shared'>;
 

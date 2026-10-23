@@ -3,7 +3,8 @@
 import React, { FC, ReactNode, useEffect, useState } from 'react';
 import { Icon as IconType } from '../assets/icons';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
-import { Icon, Tooltip } from '@/app/components';
+import { Icon } from '@/app/components/ui/Icon.tsx';
+import { Tooltip } from '@/app/components/ui/Tooltip.tsx';
 import { Pixel } from '@/app/components/utils/Measures.ts';
 
 type IconButtonProps = {

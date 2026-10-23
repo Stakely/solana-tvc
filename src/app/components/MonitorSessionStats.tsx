@@ -1,65 +1,55 @@
 'use client';
 
-import { FC, useEffect, useMemo, useState } from 'react';
-import { Delta } from '@/app/components/ValidatorMonitor.tsx';
+import { FC, useEffect, useState } from 'react';
+import { SessionTotals } from '@/app/hooks/use-measure.tsx';
 import { useAnimatedNumber } from '@/app/hooks';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
-import { Icon, Surface, Text } from '@/app/components/ui';
+import { Surface, Text } from '@/app/components/ui';
+import { formatPercent } from '@/app/utils.ts';
 
-type MonitorStatsProps = {
-  notVoting: boolean;
-  deltas: Array<Delta>;
-  startedAt: Date;
-  isStopped: boolean;
+type MonitorSessionStatsProps = {
+  totals: SessionTotals;
+  // 0 until the session starts.
+  startedAt: number;
+  running: boolean;
+  // Under review or in the migration epoch: no inclusion figures (§4.8).
+  hidden?: boolean;
 };
 
-export const MonitorSessionStats: FC<MonitorStatsProps> = ({
-  notVoting,
-  deltas,
+function msToHms(ms: number): string {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const hh = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+  const mm = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+  const ss = String(totalSeconds % 60).padStart(2, '0');
+  return `${hh}:${mm}:${ss}`;
+}
+
+// Totals since the monitor opened, each server window counted once.
+export const MonitorSessionStats: FC<MonitorSessionStatsProps> = ({
+  totals,
   startedAt,
-  isStopped,
+  running,
+  hidden = false,
 }) => {
   const { colors } = useTheme();
-  const [elapsedMs, setElapsedMs] = useState<number>(
-    () => Date.now() - startedAt.getTime()
-  );
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
 
   useEffect(() => {
-    if (isStopped) return;
-    const id = setInterval(() => {
-      setElapsedMs(Date.now() - startedAt.getTime());
-    }, 1000);
-
+    if (!running) return;
+    setNowMs(Date.now());
+    const id = setInterval(() => setNowMs(Date.now()), 1000);
     return () => clearInterval(id);
-  }, [startedAt, isStopped]);
+  }, [running, startedAt]);
 
-  const elapsedHms = useMemo(() => {
-    const totalSeconds = Math.max(0, Math.floor(elapsedMs / 1000));
-    const hh = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
-    const mm = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
-    const ss = String(totalSeconds % 60).padStart(2, '0');
-    return `${hh}:${mm}:${ss}`;
-  }, [elapsedMs]);
-
-  const sessionStartSlot = deltas.length
-    ? Math.min(...deltas.map((d) => d.to))
-    : 0;
-  const sessionLastSampleSlot = deltas.length
-    ? Math.max(...deltas.map((d) => d.to))
-    : 0;
-  const sessionLostCredits = deltas.length
-    ? deltas.slice(1).reduce((sum, d) => sum + d.lostCredits, 0)
-    : 0;
-
-  const sessionSlots = Math.max(sessionLastSampleSlot - sessionStartSlot, 0);
-  const maxCredits = Math.max(sessionSlots * 16, 0);
-  const sessionEarnedCredits = Math.max(maxCredits - sessionLostCredits, 0);
-
-  const animatedSlots = useAnimatedNumber(sessionSlots, 650);
-  const animatedEarned = useAnimatedNumber(sessionEarnedCredits, 650);
-  const animatedMissed = useAnimatedNumber(sessionLostCredits, 650);
-
-  const creditsPerSlotAvg = sessionEarnedCredits / sessionSlots;
+  const included = useAnimatedNumber(totals.included, 650);
+  const payable = useAnimatedNumber(totals.payable, 650);
+  const missed = useAnimatedNumber(totals.missed, 650);
+  const rate =
+    !hidden && totals.payable > 0
+      ? formatPercent(totals.included / totals.payable, 2)
+      : '—';
+  const counted = hidden ? '—' : `${included} of ${payable}`;
+  const elapsed = startedAt > 0 ? msToHms(nowMs - startedAt) : '00:00:00';
 
   return (
     <div className={'flex w-full'}>
@@ -72,64 +62,27 @@ export const MonitorSessionStats: FC<MonitorStatsProps> = ({
       >
         <div className={'w-full flex-col gap-30'}>
           <div className={'w-full flex space-between items-center'}>
-            <Text variant={'h3'} content={'Monitor session stats'} />
-            <Text
-              variant={'body1'}
-              content={`Session time: <b>${elapsedHms}</b>`}
-            />
+            <Text variant={'h3'} content={'Session'} />
+            <Text content={`Session time: <b>${elapsed}</b>`} />
           </div>
           <div className={'w-full flex-col gap-10'}>
-            <div className={'w-full flex gap-5 items-center'}>
-              <Text
-                content={`Session start slot: <b>${sessionStartSlot}</b>`}
-              />
-            </div>
-            <div className={'w-full flex gap-5 items-center'}>
-              <Text
-                content={`Last sample slot: <b>${sessionLastSampleSlot}</b>`}
-              />
-              {notVoting && (
-                <Icon
-                  name={'exclamationMark'}
-                  color={colors.secondary.yellowMedium}
-                  size={'18px'}
-                />
-              )}
-            </div>
-            <div className={'w-full flex gap-5 items-center'}>
-              <Text
-                content={`Session credits earned: <b>${animatedEarned}</b>`}
-              />
-              {notVoting && (
-                <Icon
-                  name={'exclamationMark'}
-                  color={colors.secondary.yellowMedium}
-                  size={'18px'}
-                />
-              )}
-            </div>
-            <div className={'w-full flex gap-5 items-center'}>
-              <Text
-                content={`Session credits missed: <b>${animatedMissed}</b>`}
-              />
-            </div>
-            <div className={'w-full flex gap-5 items-center'}>
-              <Text
-                content={`Session duration slots: <b>${animatedSlots}</b>`}
-              />
-            </div>
-            <div className={'w-full flex gap-5 items-center'}>
-              <Text
-                content={`Session avg.: <b>${isNaN(creditsPerSlotAvg) ? '-' : creditsPerSlotAvg.toFixed(4)}</b>`}
-              />
-              {notVoting && (
-                <Icon
-                  name={'exclamationMark'}
-                  color={colors.secondary.yellowMedium}
-                  size={'18px'}
-                />
-              )}
-            </div>
+            <Text content={`Votes counted: <b>${rate}</b>`} />
+            <Text
+              content={`Paying blocks that included the vote: <b>${counted}</b>`}
+            />
+            <Text
+              content={
+                hidden
+                  ? `Missed: <b>—</b>`
+                  : `Missed: <b>${missed}</b> (shared: <b>${totals.sharedMissed}</b>)`
+              }
+            />
+            <Text
+              content={`Intervals measured: <b>${totals.measured}</b> · produced a block: <b>${totals.leader}</b> · not measured: <b>${totals.notMeasured}</b> · no paying blocks: <b>${totals.noPayingBlocks}</b>`}
+            />
+            <Text
+              content={`Slots: <b>${totals.firstSlot ?? '—'}</b> to <b>${totals.lastSlot ?? '—'}</b>`}
+            />
           </div>
         </div>
       </Surface>

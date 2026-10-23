@@ -16,7 +16,7 @@ export const VersionInfo: FC<VersionInfoProps> = ({ versions }) => {
   const isMobile = useIsMobile();
   const [showMore, setShowMore] = useState<boolean>(false);
 
-  const mainVersions = versions.splice(0, 3);
+  const mainVersions = versions.slice(0, 3);
   const versionsToShow = showMore ? versions : mainVersions;
 
   return (

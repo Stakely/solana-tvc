@@ -3,7 +3,8 @@
 import React, { FC, ReactNode, useEffect, useRef, useState } from 'react';
 import { Pixel, Rem } from '@/app/components/utils/Measures.ts';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
-import { Icon, Text } from '@/app/components';
+import { Icon } from '@/app/components/ui/Icon.tsx';
+import { Text } from '@/app/components/ui/Text.tsx';
 
 export type AccordionProps = {
   /** A visual style for the accordion */

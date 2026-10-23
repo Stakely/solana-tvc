@@ -24,7 +24,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     git openssh-client \
   && rm -rf /var/lib/apt/lists/*
 
-RUN sh -c "$(curl -sSfL https://release.anza.xyz/stable/install)"
+# Pinned: the snapshot parser depends on the CLI's JSON output (spec §6.1).
+ARG SOLANA_VERSION=4.3.2
+RUN sh -c "$(curl -sSfL https://release.anza.xyz/v${SOLANA_VERSION}/install)"
 ENV PATH="/root/.local/share/solana/install/active_release/bin:${PATH}"
 
 RUN ln -sf /root/.local/share/solana/install/active_release/bin/solana /usr/local/bin/solana \
@@ -58,7 +60,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PUBLIC_DIR=/app/public
-ENV SNAPSHOT_TTL_MS=30000
+ENV SNAPSHOT_FILE_TTL=5000
 
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static

@@ -1,7 +1,7 @@
 import React, { FC, ReactNode } from 'react';
 import { ClickAwayListener, Tooltip as MUITooltip } from '@mui/material';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
-import { Text } from '@/app/components';
+import { Text } from '@/app/components/ui/Text.tsx';
 
 type TooltipProps = {
   /**

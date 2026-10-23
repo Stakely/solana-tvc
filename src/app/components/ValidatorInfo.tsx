@@ -14,25 +14,40 @@ import {
   Tooltip,
 } from '@/app/components/ui';
 
+// Shown for what is not known: an unknown vote account, or no snapshot yet.
+const UNKNOWN = '—';
+
 type ValidatorInfoProps = {
+  vote: string;
   snapshot: Snapshot | null;
   version: VersionData | undefined;
 };
+
 export const ValidatorInfo: FC<ValidatorInfoProps> = ({
+  vote,
   snapshot,
   version,
 }) => {
   const { colors } = useTheme();
 
-  const validatorIdentity = snapshot?.validators[0]?.identityPubkey ?? '';
-  const validatorName =
-    snapshot?.validators[0]?.info?.info.name ?? validatorIdentity;
-  const validatorVoteAccount = snapshot?.validators[0]?.voteAccountPubkey ?? '';
-  const validatorVersion = snapshot?.validators[0]?.version;
-  const validatorCommission = snapshot?.validators[0]?.commission;
-  const isValidatorDelinquent = snapshot?.validators[0]?.delinquent;
-  const validatorStake = snapshot?.validators[0]?.activatedStake;
-  const validatorIcon = snapshot?.validators[0]?.info?.info.iconUrl ?? '';
+  // The monitor follows the vote account: an identity switch keeps it.
+  const validator = snapshot?.validators.find(
+    (v) => v.voteAccountPubkey === vote
+  );
+  const validatorIdentity = validator?.identityPubkey ?? '';
+  const validatorName = validator?.info?.info.name ?? validatorIdentity;
+  const validatorVoteAccount = validator?.voteAccountPubkey ?? vote;
+  const validatorVersion = validator?.version ?? UNKNOWN;
+  const validatorCommission = validator ? `${validator.commission}%` : UNKNOWN;
+  const validatorDelinquent = validator
+    ? validator.delinquent
+      ? 'Yes'
+      : 'No'
+    : UNKNOWN;
+  const validatorStake = validator
+    ? formatLamportsToSol(validator.activatedStake)
+    : UNKNOWN;
+  const validatorIcon = validator?.info?.info.iconUrl ?? '';
 
   const onCopy = async (hash: string): Promise<void> => {
     try {
@@ -63,28 +78,30 @@ export const ValidatorInfo: FC<ValidatorInfoProps> = ({
             )}
             {!validatorIcon && <Avatar name={validatorName} size={'40px'} />}
             {validatorName && (
-              <Text
-                weight={700}
-                variant={'h3'}
-                content={validatorName ?? validatorIdentity}
-              />
+              <Text weight={700} variant={'h3'} content={validatorName} />
             )}
           </div>
           <Divider color={colors.background['01']} />
           <div className={'w-full flex-col gap-10'}>
             <div className={'w-full flex gap-5 items-center'}>
               <Text content={'Identity: '} />
-              <ExternalLink
-                textVariant={'littleBody'}
-                label={`${validatorIdentity}`}
-                to={`https://www.validators.app/validators/${validatorIdentity}?locale=en&network=mainnet`}
-              />
-              <Icon
-                name={'copy'}
-                size={'16px'}
-                clickable
-                onClick={() => onCopy(validatorIdentity)}
-              />
+              {validatorIdentity ? (
+                <>
+                  <ExternalLink
+                    textVariant={'littleBody'}
+                    label={validatorIdentity}
+                    to={`https://www.validators.app/validators/${validatorIdentity}?locale=en&network=mainnet`}
+                  />
+                  <Icon
+                    name={'copy'}
+                    size={'16px'}
+                    clickable
+                    onClick={() => onCopy(validatorIdentity)}
+                  />
+                </>
+              ) : (
+                <Text variant={'littleBody'} content={UNKNOWN} />
+              )}
             </div>
             <div className={'w-full flex gap-5 items-center'}>
               <Text content={'Vote account: '} />
@@ -101,13 +118,13 @@ export const ValidatorInfo: FC<ValidatorInfoProps> = ({
             </div>
             <div className={'w-full flex gap-5 items-center'}>
               <Text
-                content={`Stake: <b>${formatLamportsToSol(validatorStake ?? '')}</b>`}
+                content={`Stake: <b>${validatorStake}</b>`}
               />
             </div>
             <div className={'w-full flex gap-5 items-center'}>
               <Text content={`Version: <b>${validatorVersion}</b>`} />
               <Tooltip
-                content={`This version is used by: 
+                content={`This version is used by:
  - ${version?.currentValidatorsPercent?.toFixed(2)}% of the validators\n - ${version?.stakePercent.toFixed(2)}% of the stake\n- Has ${version?.delinquentPercent}% of delinquent`}
                 backgroundColor={colors.background['04']}
               >
@@ -115,11 +132,11 @@ export const ValidatorInfo: FC<ValidatorInfoProps> = ({
               </Tooltip>
             </div>
             <div className={'w-full flex gap-5 items-center'}>
-              <Text content={`Commission: <b>${validatorCommission}%</b>`} />
+              <Text content={`Commission: <b>${validatorCommission}</b>`} />
             </div>
             <div className={'w-full flex gap-5 items-center'}>
               <Text
-                content={`Delinquent: <b>${isValidatorDelinquent ? 'Yes' : 'No'}</b>`}
+                content={`Delinquent: <b>${validatorDelinquent}</b>`}
               />
             </div>
           </div>

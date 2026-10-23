@@ -1,3 +1,5 @@
+import { EpochRatioState, SnapshotMeta, ValidatorInclusion } from '@/types/measure.ts';
+
 export type Lamports = string;
 
 export type StakeByVersionStats = {
@@ -21,6 +23,9 @@ export type ValidatorSnapshot = {
   voteAccountPubkey: string;
   info?: ValidatorInfo;
   ranking?: number;
+  epochRatio?: number | null;
+  epochRatioState?: EpochRatioState;
+  inclusion?: ValidatorInclusion;
 };
 
 export type Snapshot = {
@@ -33,9 +38,16 @@ export type Snapshot = {
   validators: ValidatorSnapshot[];
 };
 
+export type OrderCriteria =
+  | 'stake'
+  | 'inclusion'
+  | 'epochRatio'
+  | 'commission'
+  | 'version';
+
 export type GetSnapshotArgs = {
   orderDirection?: 'asc' | 'desc';
-  orderCriteria?: 'credits' | 'commission' | 'version';
+  orderCriteria?: OrderCriteria;
   size?: number;
   page?: number;
   publicKey?: string;
@@ -45,7 +57,7 @@ export type GetSnapshotResponse = {
   snapshot: Snapshot;
   totalItems: number;
   itemsPerPage: number;
-};
+} & SnapshotMeta;
 
 export type ValidatorInfo = {
   identityPubkey: string;

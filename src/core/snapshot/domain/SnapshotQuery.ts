@@ -1,8 +1,22 @@
 import { SnapshotParser } from '@/core/snapshot/domain/SnapshotParser.ts';
 import { SnapshotQueryArgs } from '@/core/snapshot/domain/SnapshotQueryArgs.ts';
-import { Snapshot, ValidatorInfo } from '@/types/snapshot.ts';
+import {
+  GetSnapshotResponse,
+  Snapshot,
+  ValidatorInfo,
+} from '@/types/snapshot.ts';
+import { SnapshotExtras, SnapshotMeta } from '@/types/measure.ts';
 import { SnapshotReducer } from '@/core/snapshot/domain/reducer/SnapshotReducer.ts';
 import { ValidatorInfoParser } from '@/core/snapshot/domain/ValidatorInfoParser.ts';
+
+const NO_MEASUREMENT: SnapshotMeta = {
+  instance: '',
+  epoch: null,
+  migrationEpoch: false,
+  measurement: 'ok',
+  measuring: false,
+  minMeasurableStake: null,
+};
 
 export class SnapshotQuery {
   constructor(
@@ -11,11 +25,10 @@ export class SnapshotQuery {
     private readonly _reducer: SnapshotReducer
   ) {}
 
-  async query(query: SnapshotQueryArgs): Promise<{
-    totalItems: number;
-    snapshot: Snapshot;
-    itemsPerPage: number;
-  }> {
+  async query(
+    query: SnapshotQueryArgs,
+    extras?: SnapshotExtras
+  ): Promise<GetSnapshotResponse> {
     const fullSnapshot: Snapshot = await this._snapshotParser.parse();
     const validatorsInfo = await this._validatorInfoParser.parse();
 
@@ -23,11 +36,14 @@ export class SnapshotQuery {
       validatorsInfo.map((vi) => [vi.identityPubkey, vi])
     );
 
+    // Measurement fields go on every validator before ordering, so the
+    // table can rank by them.
     const fullSnapshotWithInfo: Snapshot = {
       ...fullSnapshot,
       validators: fullSnapshot.validators.map((v) => ({
         ...v,
         info: infoByIdentity.get(v.identityPubkey),
+        ...extras?.byVote(v.voteAccountPubkey),
       })),
     };
 
@@ -35,8 +51,8 @@ export class SnapshotQuery {
 
     return {
       ...reducedSnapshot,
-      snapshot: reducedSnapshot.snapshot,
       itemsPerPage: query.size,
+      ...(extras?.meta ?? NO_MEASUREMENT),
     };
   }
 }

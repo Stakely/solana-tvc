@@ -1,4 +1,5 @@
 const LAMPORTS_PER_SOL = 1_000_000_000;
+const LAMPORTS_PER_HUNDRED_SOL = 100n * 1_000_000_000n;
 
 export function formatLamportsToSol(lamportsStr: string): string {
   const cleaned = lamportsStr.replace(/[,\s_]/g, '');
@@ -34,11 +35,41 @@ export function formatLamportsToSol(lamportsStr: string): string {
     decimals = scaled < 10 ? 2 : scaled < 100 ? 1 : 0;
   }
 
-  // Redondeo y sustitución de punto por coma
+  // Round, drop trailing zeros and print with a decimal comma.
   const formatted = scaled
     .toFixed(decimals)
-    .replace(/\.0+$/, '') // quita .0 / .00
+    .replace(/\.0+$/, '')
     .replace('.', ',');
 
   return `${formatted}${unit.suffix} SOL`;
+}
+
+// Share (0 to 1) as a percentage with a dot: 0.9876 → '98.76%'.
+export function formatPercent(share: number, decimals: number): string {
+  if (!Number.isFinite(share)) return '—';
+  return `${(share * 100).toFixed(decimals)}%`;
+}
+
+// Epoch ratio with 4 decimals: 0.99942 → '0.9994'.
+export function formatRatio(ratio: number): string {
+  return ratio.toFixed(4);
+}
+
+// Whole SOL with English digit grouping ("1,200 SOL"), for English copy;
+// the table keeps formatLamportsToSol.
+export function formatWholeSol(lamportsStr: string): string {
+  return `${(BigInt(lamportsStr) / 1_000_000_000n).toLocaleString('en-US')} SOL`;
+}
+
+// Lamports (decimal string) rounded to the nearest 100 SOL, at least 100 SOL;
+// null when the text is not a lamport amount.
+export function roundLamportsToHundredSol(lamportsStr: string): string | null {
+  if (!/^\d+$/.test(lamportsStr)) return null;
+  const lamports = BigInt(lamportsStr);
+  const half = LAMPORTS_PER_HUNDRED_SOL / 2n;
+  const rounded =
+    ((lamports + half) / LAMPORTS_PER_HUNDRED_SOL) * LAMPORTS_PER_HUNDRED_SOL;
+  return (
+    rounded < LAMPORTS_PER_HUNDRED_SOL ? LAMPORTS_PER_HUNDRED_SOL : rounded
+  ).toString();
 }

@@ -249,6 +249,29 @@ describe('MeasureService', () => {
     expect(v01.epochRatio).toBeCloseTo(1, 9);
   });
 
+  it('gives no epoch ratio to a Not measurable validator that learned its unit', async () => {
+    const { service, tracker, clock } = world({
+      sleep: 'advance',
+      // v26 has 1,000 SOL: û = 39 < 100. It is in every block.
+      validators: [
+        ...simValidators(25),
+        { vote: 'v26', identity: 'n26', stake: 10n ** 12n },
+      ],
+    });
+    service.tableExtras();
+    await service.idle();
+    // The tracker confirms its unit as it does any other's...
+    expect(tracker.status('v26', clock.t)).toBe('not_measurable');
+    expect(tracker.confirmedUnit('v26')).not.toBeNull();
+    // ...but the stake is too small for a reliable unit (spec §4.8): "—".
+    const extras = service.tableExtras();
+    expect(extras.byVote('v26')).toStrictEqual({
+      epochRatio: null,
+      epochRatioState: 'unavailable',
+    });
+    expect(extras.byVote('v01').epochRatioState).toBe('ok');
+  });
+
   it('retries the burst at most every 10 minutes while units are missing', async () => {
     const { service, clock, sleeps } = world({
       sleep: 'advance',

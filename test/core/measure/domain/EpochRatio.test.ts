@@ -78,6 +78,24 @@ describe('computeEpochRatios', () => {
     ).toBe('unavailable');
   });
 
+  // Not measurable (û < 100, spec §4.8): the tracker can confirm its unit as
+  // it does any other's, but its stake is too small for a reliable one, so
+  // the cell shows "—" and it takes no rank by epoch ratio (§5.1).
+  it('is unavailable for a not-measurable validator even with a confirmed unit', () => {
+    expect(
+      ratioOf(validator({}), { unitOf: () => U, estimateOf: () => 99 })
+    ).toEqual({ value: null, state: 'unavailable' });
+    expect(
+      ratioOf(validator({}), { unitOf: () => U, estimateOf: () => 100 })?.state
+    ).toBe('ok');
+  });
+
+  // It keeps the ratio of the unit it confirmed before it went delinquent;
+  // OrderReducer lists it without a rank.
+  it('keeps the ratio of a delinquent validator with a confirmed unit', () => {
+    expect(ratioOf(validator({ delinquent: true }))?.state).toBe('ok');
+  });
+
   // Accounts outside the epoch's stake set are always delinquent (spec §7), so
   // the delinquent flag alone marks them "—", with or without credits.
   it('is unavailable for a delinquent validator with no credits and no unit', () => {

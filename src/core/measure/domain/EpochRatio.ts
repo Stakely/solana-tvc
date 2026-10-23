@@ -24,13 +24,16 @@ export function computeEpochRatios(
   const ratios = new Map<string, EpochRatio>();
   for (const v of input.snapshot.validators) {
     const vote = v.voteAccountPubkey;
+    // Not measurable (spec §4.8): its stake is too small for a reliable
+    // unit, even one the tracker confirmed.
+    const estimate = input.estimateOf(vote);
+    if (estimate !== null && estimate < MEASURE.minUnitEstimate) {
+      ratios.set(vote, UNAVAILABLE);
+      continue;
+    }
     const unit = input.unitOf(vote);
     if (unit === null) {
-      const estimate = input.estimateOf(vote);
-      const unlearnable =
-        v.delinquent ||
-        (estimate !== null && estimate < MEASURE.minUnitEstimate);
-      ratios.set(vote, unlearnable ? UNAVAILABLE : PENDING);
+      ratios.set(vote, v.delinquent ? UNAVAILABLE : PENDING);
       continue;
     }
     if (input.blocksProduced < MEASURE.epochRatioMinBlocks) {

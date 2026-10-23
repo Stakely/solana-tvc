@@ -108,6 +108,90 @@ describe('MeasureService', () => {
     );
   });
 
+  // The reward budget is read in the background: a slow RPC must not hold
+  // the ingest queue, so /api/measure answers while the read is pending and
+  // the tracker skips windows ('budget') until it arrives.
+  describe('while the reward budget read is pending', () => {
+    const BLOCKED = 'blocked';
+    const answered = <T>(promise: Promise<T>) =>
+      Promise.race([
+        promise,
+        new Promise<typeof BLOCKED>((resolve) =>
+          setTimeout(() => resolve(BLOCKED), 1_000)
+        ),
+      ]);
+
+    type Rpc = ReturnType<typeof world>['rpc'];
+    const neverAnswers = (rpc: Rpc) =>
+      rpc.accountData.mockImplementation(
+        () => new Promise<Uint8Array>(() => undefined)
+      );
+    // A read that answers when the test releases it.
+    const heldBudget = (rpc: Rpc) => {
+      let release: () => void = () => undefined;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      rpc.accountData.mockImplementation(async () => {
+        await held;
+        return encodeBudget(simBudget(500));
+      });
+      return () => release();
+    };
+
+    it('answers measure requests without waiting for it', async () => {
+      const { service, rpc, tracker, clock } = world();
+      neverAnswers(rpc);
+      for (let i = 0; i < 3; i++) {
+        const response = await answered(service.measure('v01'));
+        expect(response).not.toBe(BLOCKED);
+        if (response !== BLOCKED) {
+          expect(response.validator?.recent).toEqual([]);
+          expect(response.coverageSeconds).toBe(0);
+        }
+        clock.t += 5_000;
+      }
+      expect(tracker.budget()).toBeNull();
+    });
+
+    it('keeps a single read in flight', async () => {
+      const { service, rpc, clock } = world();
+      neverAnswers(rpc);
+      for (let i = 0; i < 4; i++) {
+        expect(await answered(service.measure('v01'))).not.toBe(BLOCKED);
+        clock.t += 5_000;
+      }
+      expect(rpc.accountData).toHaveBeenCalledTimes(1);
+    });
+
+    it('measures from the next snapshot once the budget arrives', async () => {
+      const { service, rpc, tracker, clock } = world();
+      const release = heldBudget(rpc);
+      expect(await answered(service.measure('v01'))).not.toBe(BLOCKED);
+      clock.t += 5_000;
+      const before = await answered(service.measure('v01'));
+      expect(before !== BLOCKED && before.validator?.recent).toEqual([]);
+
+      release();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+      expect(tracker.budget()?.epoch).toBe(500);
+
+      clock.t += 5_000;
+      const after = await answered(service.measure('v01'));
+      expect(after !== BLOCKED && after.validator?.recent).toHaveLength(1);
+      expect(rpc.accountData).toHaveBeenCalledTimes(1);
+    });
+
+    it('is awaited by idle()', async () => {
+      const { service, rpc, tracker } = world({ sleep: 'advance' });
+      const release = heldBudget(rpc);
+      service.tableExtras();
+      setTimeout(release, 10);
+      await service.idle();
+      expect(tracker.budget()?.epoch).toBe(500);
+    });
+  });
+
   it('measures the validator while requests keep coming', async () => {
     const { service, clock } = world();
     let response: MeasureResponse = await service.measure('v01');

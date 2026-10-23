@@ -82,6 +82,8 @@ export class MeasureService {
   private _burstRun: Promise<void> | null = null;
   private _burstAt = -Infinity;
   private _burstEpoch: number | null = null;
+  private _budgetRun: Promise<void> | null = null;
+  private _budgetAt = -Infinity;
 
   constructor(private readonly _deps: MeasureDeps) {
     this._now = _deps.now ?? Date.now;
@@ -187,10 +189,16 @@ export class MeasureService {
 
   // Resolves when the background work started so far has finished.
   async idle(): Promise<void> {
-    while (this._ratioRun || this._burstRun) {
-      await Promise.all([this._ratioRun, this._burstRun]);
+    for (;;) {
+      while (this._ratioRun || this._burstRun || this._budgetRun) {
+        await Promise.all([this._ratioRun, this._burstRun, this._budgetRun]);
+      }
+      await this._queue;
+      // The queue may have started a budget read meanwhile.
+      if (!this._ratioRun && !this._burstRun && !this._budgetRun) {
+        return;
+      }
     }
-    await this._queue;
   }
 
   private _serial(task: () => Promise<void>): Promise<void> {
@@ -213,7 +221,7 @@ export class MeasureService {
     this._ingestedSeq = taken.seq;
     const bankSlot = bankSlotOf(taken.snapshot);
     if (bankSlot !== null) {
-      await this._ensureBudget(this._deps.network.epochOf(bankSlot));
+      this._requestBudget(this._deps.network.epochOf(bankSlot));
     }
     this._deps.tracker.ingest(
       taken.snapshot,
@@ -223,20 +231,34 @@ export class MeasureService {
   }
 
   // The account is rewritten in the first block of each epoch; until it
-  // matches, every new snapshot reads it again (spec §3).
-  private async _ensureBudget(epoch: number): Promise<void> {
-    const tracker = this._deps.tracker;
-    if (!tracker.needsBudget(epoch)) {
+  // matches, new snapshots read it again (spec §3). The read runs in the
+  // background, never in the ingest queue: a slow RPC must not hold
+  // /api/measure. Until the budget arrives the tracker skips the windows
+  // ('budget'). One read at a time, at most one per snapshot TTL.
+  private _requestBudget(epoch: number): void {
+    if (
+      this._budgetRun ||
+      !this._deps.tracker.needsBudget(epoch) ||
+      this._now() - this._budgetAt < MEASURE.snapshotTtlMs
+    ) {
       return;
     }
-    try {
-      const data = await this._deps.rpc.accountData(REWARD_BUDGET_ADDRESS);
-      const budget = data ? rewardBudgetFor(data, epoch) : null;
-      if (budget) {
-        tracker.setBudget(budget);
-      }
-    } catch (error) {
-      logFailure('reward budget read')(error);
+    this._budgetAt = this._now();
+    this._budgetRun = this._readBudget(epoch)
+      .catch(logFailure('reward budget read'))
+      .finally(() => {
+        this._budgetRun = null;
+      });
+  }
+
+  private async _readBudget(epoch: number): Promise<void> {
+    const data = await this._deps.rpc.accountData(REWARD_BUDGET_ADDRESS);
+    const budget = data ? rewardBudgetFor(data, epoch) : null;
+    const tracker = this._deps.tracker;
+    if (budget && tracker.needsBudget(budget.epoch)) {
+      tracker.setBudget(budget);
+      // The epoch ratio needs the budget: refresh it on the next kick.
+      this._ratiosAt = -Infinity;
     }
   }
 

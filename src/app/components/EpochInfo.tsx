@@ -6,12 +6,18 @@ import { ProgressBar } from '@/app/components/ProgressBar.tsx';
 import { useAnimatedBigInt, useAnimatedNumber, useIsMobile } from '@/app/hooks';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
 import { Surface, Text } from '@/app/components/ui';
+import { MEASURE } from '@/core/measure/domain/Constants.ts';
+import {
+  SlotSample,
+  addReading,
+  addSlotSample,
+  isSlotSample,
+  slotSeconds,
+} from '@/app/components/slot-time.ts';
 
 type EpochInfoProps = {
   epoch: Epoch | null;
 };
-
-const SLOT_MS = 400;
 
 function msToHms(ms: number) {
   const totalSeconds = Math.max(0, Math.floor(ms / 1000));
@@ -26,22 +32,42 @@ export const EpochInfo: FC<EpochInfoProps> = ({ epoch }) => {
   const isMobile = useIsMobile();
   const [deadlineMs, setDeadlineMs] = useState<number | null>(null);
   const [nowMs, setNowMs] = useState<number>(() => Date.now());
-  const initializedRef = useRef(false);
+  const samples = useRef<SlotSample[]>([]);
+  // The last readings of /api/epoch, samples or not: the polling rhythm.
+  const readings = useRef<SlotSample[]>([]);
+  // The epoch the countdown is anchored on.
+  const anchoredEpoch = useRef<number | null>(null);
+  // Last measured slot time: kept when the samples expire (hidden tab).
+  const measuredSlotSeconds = useRef<number>(MEASURE.fallbackSlotSeconds);
 
+  // Runs on every reading: the data provider sets a new `epoch` object on
+  // each poll. A new sample measures the slot time and re-anchors the
+  // countdown; the first reading and a new epoch re-anchor it too, even when
+  // they are not samples (see isSlotSample). A reading after a pause in the
+  // same epoch does not: it may be stale, and the deadline is absolute.
   useEffect(() => {
-    if (initializedRef.current) return;
     if (!epoch) return;
-    if (
-      typeof epoch.slotIndex !== 'number' ||
-      typeof epoch.slotsInEpoch !== 'number'
-    )
-      return;
-
+    const slot = Number(epoch.absoluteSlot);
+    if (!Number.isFinite(slot)) return;
+    const now = Date.now();
+    const reading: SlotSample = { t: now, slot };
+    const before = samples.current;
+    if (isSlotSample(readings.current, reading)) {
+      samples.current = addSlotSample(samples.current, reading);
+      measuredSlotSeconds.current = slotSeconds(
+        samples.current,
+        measuredSlotSeconds.current
+      );
+    }
+    readings.current = addReading(readings.current, reading);
+    const newSample = samples.current !== before;
+    if (!newSample && anchoredEpoch.current === epoch.epoch) return;
+    anchoredEpoch.current = epoch.epoch;
     const remainingSlots = Math.max(0, epoch.slotsInEpoch - epoch.slotIndex);
-    const remainingMs = remainingSlots * SLOT_MS;
-
-    initializedRef.current = true;
-    setDeadlineMs(Date.now() + remainingMs);
+    setDeadlineMs(
+      now + Math.round(remainingSlots * measuredSlotSeconds.current * 1_000)
+    );
+    setNowMs(now);
   }, [epoch]);
 
   useEffect(() => {

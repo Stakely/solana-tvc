@@ -63,6 +63,9 @@ export type MeasureResponse = {
   } | null;
 };
 
+// Counts over the measured windows of the last 5 minutes (spec §4.7).
+// payable = 0 means no measured window to count (Not measurable and
+// Delinquent are not measured, spec §6.4; or none yet): show "—", not 0.
 export type ValidatorInclusion = {
   status: InclusionStatus;
   included: number;

@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { SnapshotParser } from '@/core/snapshot/domain/SnapshotParser.ts';
 import path from 'path';
 import { SnapshotQuery } from '@/core/snapshot/domain/SnapshotQuery.ts';
@@ -14,9 +15,13 @@ import { EpochFreshener } from '@/core/epoch/domain/EpochFreshener.ts';
 import { ValidatorInfoFreshener } from '@/core/snapshot/domain/ValidatorInfoFreshener.ts';
 import { SnapshotSource } from '@/core/snapshot/domain/SnapshotSource.ts';
 import { MEASURE } from '@/core/measure/domain/Constants.ts';
+import { Network } from '@/core/snapshot/domain/Network.ts';
+import { SolanaRpc } from '@/core/solana/SolanaRpc.ts';
+import { VoteInclusionTracker } from '@/core/snapshot/domain/VoteInclusionTracker.ts';
+import { MeasureService } from '@/core/measure/application/Measure.ts';
 
 // One instance per process, shared by every route bundle (spec §4.1).
-type Shared = { source?: SnapshotSource };
+type Shared = { source?: SnapshotSource; measure?: MeasureService };
 const shared = globalThis as typeof globalThis & { __solanaTvc?: Shared };
 const singletons = (): Shared => (shared.__solanaTvc ??= {});
 
@@ -84,6 +89,25 @@ export class Factory {
       Factory.SolanaCli(),
       path.join(process.cwd(), 'public')
     ));
+  }
+
+  static Network(): Network {
+    return Network.fromEnv(process.env.SOLANA_NETWORK);
+  }
+
+  static SolanaRpc(): SolanaRpc {
+    return new SolanaRpc(Factory.rpcUrls());
+  }
+
+  static MeasureService(): MeasureService {
+    const network = Factory.Network();
+    return (singletons().measure ??= new MeasureService({
+      source: Factory.SnapshotSource(),
+      rpc: Factory.SolanaRpc(),
+      tracker: new VoteInclusionTracker(network),
+      network,
+      instance: randomUUID().slice(0, 8),
+    }));
   }
 
   static ValidatorSnapshotFreshener(): ValidatorSnapshotFreshener {

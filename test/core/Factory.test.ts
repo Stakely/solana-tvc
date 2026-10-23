@@ -31,4 +31,8 @@ describe('Factory', () => {
   it('shares one snapshot source per process', () => {
     expect(Factory.SnapshotSource()).toBe(Factory.SnapshotSource());
   });
+
+  it('shares one measure service per process', () => {
+    expect(Factory.MeasureService()).toBe(Factory.MeasureService());
+  });
 });

@@ -392,7 +392,8 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
 
   // A name cut by its cell ends in "…" (the cell's own ellipsis does not
   // reach text inside this flex row), and the avatar keeps its size.
-  const identityCell = (size: Pixel, bold: boolean) => (row: ValidatorRow) => (
+  const identityCell = (size: Pixel, bold: boolean) => {
+    const IdentityCell = (row: ValidatorRow) => (
     <div className={`w-full flex ${bold ? 'gap-5' : 'gap-15'} items-center`}>
       <div style={{ display: 'flex', flexShrink: 0 }}>
         {row.icon ? (
@@ -412,11 +413,16 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
         <Text weight={bold ? 700 : undefined} content={row.identity} />
       </div>
     </div>
-  );
+    );
+    return IdentityCell;
+  };
 
-  const headerLabel = (text: string, help?: string) => () => (
-    <HeaderLabel text={text} help={help} inHeaderRow={!isMobile} />
-  );
+  const headerLabel = (text: string, help?: string) => {
+    const HeaderCell = () => (
+      <HeaderLabel text={text} help={help} inHeaderRow={!isMobile} />
+    );
+    return HeaderCell;
+  };
 
   const epochRatioColumn: TableColumn<ValidatorRow> = {
     label: headerLabel('Epoch ratio', HELP.epochRatio),

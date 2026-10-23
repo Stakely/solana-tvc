@@ -14,6 +14,9 @@ import {
   Tooltip,
 } from '@/app/components/ui';
 
+// Shown for what is not known: an unknown vote account, or no snapshot yet.
+const UNKNOWN = '—';
+
 type ValidatorInfoProps = {
   vote: string;
   snapshot: Snapshot | null;
@@ -34,10 +37,16 @@ export const ValidatorInfo: FC<ValidatorInfoProps> = ({
   const validatorIdentity = validator?.identityPubkey ?? '';
   const validatorName = validator?.info?.info.name ?? validatorIdentity;
   const validatorVoteAccount = validator?.voteAccountPubkey ?? vote;
-  const validatorVersion = validator?.version;
-  const validatorCommission = validator?.commission;
-  const isValidatorDelinquent = validator?.delinquent;
-  const validatorStake = validator?.activatedStake;
+  const validatorVersion = validator?.version ?? UNKNOWN;
+  const validatorCommission = validator ? `${validator.commission}%` : UNKNOWN;
+  const validatorDelinquent = validator
+    ? validator.delinquent
+      ? 'Yes'
+      : 'No'
+    : UNKNOWN;
+  const validatorStake = validator
+    ? formatLamportsToSol(validator.activatedStake)
+    : UNKNOWN;
   const validatorIcon = validator?.info?.info.iconUrl ?? '';
 
   const onCopy = async (hash: string): Promise<void> => {
@@ -76,17 +85,23 @@ export const ValidatorInfo: FC<ValidatorInfoProps> = ({
           <div className={'w-full flex-col gap-10'}>
             <div className={'w-full flex gap-5 items-center'}>
               <Text content={'Identity: '} />
-              <ExternalLink
-                textVariant={'littleBody'}
-                label={`${validatorIdentity}`}
-                to={`https://www.validators.app/validators/${validatorIdentity}?locale=en&network=mainnet`}
-              />
-              <Icon
-                name={'copy'}
-                size={'16px'}
-                clickable
-                onClick={() => onCopy(validatorIdentity)}
-              />
+              {validatorIdentity ? (
+                <>
+                  <ExternalLink
+                    textVariant={'littleBody'}
+                    label={validatorIdentity}
+                    to={`https://www.validators.app/validators/${validatorIdentity}?locale=en&network=mainnet`}
+                  />
+                  <Icon
+                    name={'copy'}
+                    size={'16px'}
+                    clickable
+                    onClick={() => onCopy(validatorIdentity)}
+                  />
+                </>
+              ) : (
+                <Text variant={'littleBody'} content={UNKNOWN} />
+              )}
             </div>
             <div className={'w-full flex gap-5 items-center'}>
               <Text content={'Vote account: '} />
@@ -103,7 +118,7 @@ export const ValidatorInfo: FC<ValidatorInfoProps> = ({
             </div>
             <div className={'w-full flex gap-5 items-center'}>
               <Text
-                content={`Stake: <b>${formatLamportsToSol(validatorStake ?? '')}</b>`}
+                content={`Stake: <b>${validatorStake}</b>`}
               />
             </div>
             <div className={'w-full flex gap-5 items-center'}>
@@ -117,11 +132,11 @@ export const ValidatorInfo: FC<ValidatorInfoProps> = ({
               </Tooltip>
             </div>
             <div className={'w-full flex gap-5 items-center'}>
-              <Text content={`Commission: <b>${validatorCommission}%</b>`} />
+              <Text content={`Commission: <b>${validatorCommission}</b>`} />
             </div>
             <div className={'w-full flex gap-5 items-center'}>
               <Text
-                content={`Delinquent: <b>${isValidatorDelinquent ? 'Yes' : 'No'}</b>`}
+                content={`Delinquent: <b>${validatorDelinquent}</b>`}
               />
             </div>
           </div>

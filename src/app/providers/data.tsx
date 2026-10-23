@@ -16,6 +16,7 @@ import {
 } from '@/types/snapshot.ts';
 import { SnapshotMeta } from '@/types/measure.ts';
 import { MEASURE } from '@/core/measure/domain/Constants.ts';
+import { getJson } from '@/app/get-json.ts';
 import { usePageVisible } from '@/app/hooks/page-visible.tsx';
 
 // Rows per page of the validators table.
@@ -38,15 +39,6 @@ export type DataContextType = {
 };
 
 const DataContext = createContext<DataContextType | null>(null);
-
-const JSON_GET: RequestInit = {
-  method: 'GET',
-  headers: {
-    'content-type': 'application/json',
-    accept: 'application/json',
-  },
-  cache: 'no-store',
-};
 
 // Every parameter goes through encodeURIComponent. The order is sent only
 // when the user picked one, so the server applies its own default.
@@ -99,17 +91,6 @@ export function metaOf(response: GetSnapshotResponse): SnapshotMeta {
     inclusionCoverageSeconds: response.inclusionCoverageSeconds,
     cluster: response.cluster,
   };
-}
-
-// Null on a network or HTTP error: the next poll tries again.
-async function getJson<T>(url: string): Promise<T | null> {
-  try {
-    const response = await fetch(url, JSON_GET);
-    if (!response.ok) return null;
-    return (await response.json()) as T;
-  } catch {
-    return null;
-  }
 }
 
 // Polls /api/epoch and /api/snapshot every MEASURE.measurePollMs while the

@@ -2,6 +2,7 @@
 
 import { FC } from 'react';
 import { StakelyLogo } from '@/app/components/StakelyLogo.tsx';
+import { FOOTER_HEIGHT } from '@/app/components/footer-height.ts';
 import { Text } from '@/app/components/ui';
 
 export const Footer: FC = () => {
@@ -11,7 +12,7 @@ export const Footer: FC = () => {
         'w-full items-center content-center flex gap-20 bg-translucent'
       }
       style={{
-        height: '50px',
+        height: FOOTER_HEIGHT,
       }}
     >
       <Text

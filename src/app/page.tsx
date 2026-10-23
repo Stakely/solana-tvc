@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useData } from '@/app/providers/data.tsx';
+import { DataProvider, useData } from '@/app/providers/data.tsx';
 import {
   ClusterAvg,
   EpochInfo,
@@ -15,7 +15,7 @@ import { useIsMobile } from '@/app/hooks/is-mobile.tsx';
 
 export const dynamic = 'force-dynamic';
 
-export default function Home() {
+function Home() {
   const isMobile = useIsMobile();
   const { sendEvent } = useAnalytics();
   const {
@@ -78,5 +78,15 @@ export default function Home() {
         <VersionInfo versions={versions} />
       </div>
     </div>
+  );
+}
+
+// The data polling lives here, not in the root layout, so other pages do not
+// poll the API.
+export default function Page() {
+  return (
+    <DataProvider>
+      <Home />
+    </DataProvider>
   );
 }

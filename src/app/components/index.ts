@@ -5,7 +5,6 @@ export * from './EpochInfo.tsx';
 export * from './ClusterAvg.tsx';
 export * from './ValidatorsInfo.tsx';
 export * from './ValidatorMonitor.tsx';
-export * from './ValidatorDeltaGraph.tsx';
 export * from './ValidatorInfo.tsx';
 export * from './MonitorSessionStats.tsx';
 export * from './VersionInfo.tsx';

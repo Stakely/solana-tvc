@@ -80,6 +80,7 @@ function Home() {
         )}
         {measuredVote !== null && (
           <ValidatorMonitor
+            vote={measuredVote}
             versions={versions}
             snapshot={snapshot}
             onBackClicked={() => {

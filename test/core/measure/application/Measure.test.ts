@@ -356,4 +356,70 @@ describe('MeasureService', () => {
     expect(response.validator?.recent).toEqual([]);
     expect(response.validator?.epochRatioState).toBe('unavailable');
   });
+
+  // While the numbers are hidden, the statuses that rest on P read Measuring.
+  // Not measurable (û, from the stake) and Delinquent (the CLI flag) do not
+  // rest on it, so they stay.
+  describe('while the numbers are hidden', () => {
+    // v26 has 1,000 SOL: û = 39 < 100, whatever P is.
+    const validators = [
+      ...simValidators(25),
+      { vote: 'v26', identity: 'n26', stake: 10n ** 12n },
+    ];
+
+    const statuses = async (service: MeasureService) => {
+      const status = async (vote: string) =>
+        (await service.measure(vote)).validator?.status;
+      return {
+        v01: await status('v01'),
+        v25: await status('v25'),
+        v26: await status('v26'),
+      };
+    };
+
+    it('keeps Not measurable and Delinquent while the measurement is under review', async () => {
+      const { service, sim, tracker, clock } = world({
+        validators,
+        // Windows that confirm the units and bring v01 to OK, then windows
+        // with more paying blocks than slots: under review.
+        step: (call) => [20 + (call % 3), call > 8 ? { slots: 5 } : {}],
+      });
+      await service.measure('v01');
+      for (let i = 0; i < 17; i++) {
+        clock.t += 5_000;
+        await service.measure('v01');
+      }
+      sim.delinquent.add('v25');
+      clock.t += 5_000;
+      await service.measure('v25');
+
+      // The tracker has a status for v01 that rests on P...
+      expect(tracker.measurement(clock.t)).toBe('under_review');
+      expect(tracker.status('v01', clock.t)).toBe('ok');
+      // ...which the response hides.
+      expect(await statuses(service)).toEqual({
+        v01: 'measuring',
+        v25: 'delinquent',
+        v26: 'not_measurable',
+      });
+      const v26 = (await service.measure('v26')).validator;
+      expect(v26?.last5m).toBeNull();
+      expect(v26?.recent).toEqual([]);
+    });
+
+    it('keeps Not measurable and Delinquent in the migration epoch', async () => {
+      const { service, sim, clock } = world({ epoch: 1064, validators });
+      await service.measure('v01');
+      sim.delinquent.add('v25');
+      clock.t += 5_000;
+      await service.measure('v25');
+
+      expect((await service.measure('v01')).migrationEpoch).toBe(true);
+      expect(await statuses(service)).toEqual({
+        v01: 'measuring',
+        v25: 'delinquent',
+        v26: 'not_measurable',
+      });
+    });
+  });
 });

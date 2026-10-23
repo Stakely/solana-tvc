@@ -387,7 +387,11 @@ export class MeasureService {
           ? null
           : {
               votePubkey: vote,
-              status: hidden && status !== 'delinquent' ? 'measuring' : status,
+              // Hidden, the statuses that rest on P read Measuring. Not
+              // measurable (û, from the stake) and Delinquent (the CLI
+              // flag) do not rest on it, so they stay.
+              status:
+                hidden && !WITHOUT_NUMBERS.has(status) ? 'measuring' : status,
               last5m: hidden ? null : this._last5m(vote, status, now),
               // Paying blocks without the vote are misses: hidden under
               // review (spec §4.8) and for the not measured statuses.

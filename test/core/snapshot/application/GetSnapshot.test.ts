@@ -9,7 +9,12 @@ import {
 } from '@/core/snapshot/application/GetSnapshot.ts';
 import { SnapshotQuery } from '@/core/snapshot/domain/SnapshotQuery.ts';
 import { SnapshotParser } from '@/core/snapshot/domain/SnapshotParser.ts';
-import { GetSnapshotArgs, GetSnapshotResponse } from '@/types/snapshot.ts';
+import {
+  GetSnapshotArgs,
+  GetSnapshotResponse,
+  Snapshot,
+  ValidatorSnapshot,
+} from '@/types/snapshot.ts';
 import { InclusionStatus, SnapshotMeta } from '@/types/measure.ts';
 import { Factory } from '@/core/Factory.ts';
 import { ValidatorInfoParser } from '@/core/snapshot/domain/ValidatorInfoParser.ts';
@@ -22,11 +27,11 @@ const SEVEN = '7pR7t5axFfkg2VZB1uAuFNUvpAeowq2v15J4gw5MmHTB';
 const SEVEN_VOTE = '59k9CiZ7L1bpEivLrAtaMPMgw18syZ4RQsJUo3hbbj8x';
 
 // Fixture: puffin (stake 1000, commission 10) and 7pR7 (stake 2000,
-// commission 0, delinquent).
-function build(extras?: SnapshotExtrasProvider) {
+// commission 0, delinquent). `parser` replaces the snapshot of the fixture.
+function build(extras?: SnapshotExtrasProvider, parser?: SnapshotParser) {
   const dir = path.join(process.cwd(), 'test/core/snapshot/application');
   const query = new SnapshotQuery(
-    new SnapshotParser(path.join(dir, 'snapshot.test.json')),
+    parser ?? new SnapshotParser(path.join(dir, 'snapshot.test.json')),
     new ValidatorInfoParser(path.join(dir, 'validator_info.test.json')),
     Factory.SnapshotReducer()
   );
@@ -86,12 +91,61 @@ const ids = (response: GetSnapshotResponse) =>
 const rankings = (response: GetSnapshotResponse) =>
   response.snapshot.validators.map((v) => v.ranking);
 
+const validator = (
+  name: string,
+  stake: number,
+  delinquent = false
+): ValidatorSnapshot => ({
+  activatedStake: String(stake),
+  commission: 0,
+  credits: 0,
+  delinquent,
+  epochCredits: 0,
+  identityPubkey: name,
+  lastVote: 10,
+  rootSlot: 10,
+  skipRate: 0,
+  version: '4.0.0',
+  voteAccountPubkey: `${name}-vote`,
+});
+
+// A snapshot parser that serves these validators, in this order.
+const parserOf = (validators: ValidatorSnapshot[]): SnapshotParser => {
+  const snapshot: Snapshot = {
+    averageSkipRate: 0,
+    averageStakeWeightedSkipRate: 0,
+    stakeByVersion: {},
+    totalActiveStake: '0',
+    totalCurrentStake: '0',
+    totalDelinquentStake: '0',
+    validators,
+  };
+  return { parse: async () => snapshot } as unknown as SnapshotParser;
+};
+
 describe('Get Snapshot test', () => {
   it('orders by stake by default, delinquent validators last', async () => {
     const response = await build()({});
     expect(ids(response)).toEqual([PUFFIN, SEVEN]);
     expect(response.snapshot.validators[0].ranking).toBe(1);
     expect(response.snapshot.validators[1].ranking).toBeUndefined();
+    expect(response.measuring).toBe(false);
+  });
+
+  it('ranks by stake when the measure service is wired in but nobody measures', async () => {
+    // The normal production case: extras are provided, no measure request in
+    // the last 20 s and the request names no order. Votes counted would leave
+    // every validator without a rank, as nobody has an inclusion status.
+    const response = await build(
+      extras(false, {}),
+      parserOf([
+        validator('small', 1000),
+        validator('big', 3000, true),
+        validator('mid', 2000),
+      ])
+    )({});
+    expect(ids(response)).toEqual(['mid', 'small', 'big']);
+    expect(rankings(response)).toEqual([1, 2, undefined]);
     expect(response.measuring).toBe(false);
   });
 

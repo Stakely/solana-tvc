@@ -12,7 +12,10 @@ export class GetEpoch extends ApplicationService {
   }
 
   protected async _doExec(): Promise<GetEpochResponse> {
-    this._freshener.ensureFresh();
+    // Not awaited: the answer comes from the file as it is now.
+    this._freshener
+      .ensureFresh()
+      .catch((error) => console.error('epoch refresh failed', error));
     return this._query.query();
   }
 }

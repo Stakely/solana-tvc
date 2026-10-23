@@ -42,6 +42,14 @@ export type TableColumn<T> = {
   width?: Percentage;
 
   /**
+   * Optional minimum width of the column, as any CSS length (e.g. '80px' or
+   * 'calc(6rem + 8px)'). The header and the cells never get narrower than it:
+   * the other columns give up their room first, and when the minimums add up
+   * to more than the table, the rows overflow their container.
+   */
+  minWidth?: string;
+
+  /**
    * Optional alignment of the content within the column.
    * - 'start' (default): left-aligned.
    * - 'center': centered.
@@ -348,6 +356,7 @@ export const Table = <T,>({
             key={`d-${d_idx}-c-${c_idx}`}
             style={{
               width: getColumnWidth(c),
+              minWidth: c.minWidth,
               display: 'flex',
               flexDirection: 'row',
               alignItems: 'center',
@@ -508,6 +517,7 @@ export const Table = <T,>({
           <div
             style={{
               width: getColumnWidth(c),
+              minWidth: c.minWidth,
               display: 'flex',
               flexDirection: 'row',
               justifyContent: getColumnAlignment(c),

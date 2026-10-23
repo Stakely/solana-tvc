@@ -5,6 +5,7 @@ import { DataProvider, useData } from '@/app/providers/data.tsx';
 import {
   ClusterAvg,
   EpochInfo,
+  MeasurementBanner,
   ValidatorMonitor,
   ValidatorsInfo,
   VersionInfo,
@@ -27,17 +28,18 @@ function Home() {
     pubKeyFilter,
     setCurrentPage,
     setPubKeyFilter,
+    orderCriteria,
+    setOrderCriteria,
   } = useData();
 
   const versions = snapshot ? versionsToRows(snapshot.stakeByVersion) : [];
-  const [monitoringValidator, setMonitoringValidator] = useState<string | null>(
-    null
-  );
+  // The monitor follows the vote account: an identity switch keeps it.
+  const [measuredVote, setMeasuredVote] = useState<string | null>(null);
 
-  const onMonitoringValidatorClicked = (identity: string) => {
-    setMonitoringValidator(identity);
-    setPubKeyFilter(identity);
-    sendEvent('monitoring_started', { identity });
+  const onMeasureClicked = (vote: string) => {
+    setMeasuredVote(vote);
+    setPubKeyFilter(vote);
+    sendEvent('monitoring_started', { vote });
   };
 
   useEffect(() => {
@@ -52,24 +54,36 @@ function Home() {
         <ClusterAvg snapshot={snapshot} cluster={meta?.cluster ?? null} />
       </div>
 
+      {measuredVote === null && (
+        <MeasurementBanner
+          measurement={meta?.measurement}
+          migrationEpoch={meta?.migrationEpoch}
+          epoch={meta?.epoch}
+          clusterAlert={meta?.cluster?.alert}
+        />
+      )}
+
       <div className={'w-full flex'}>
-        {!monitoringValidator && (
+        {measuredVote === null && (
           <ValidatorsInfo
             snapshot={snapshot}
+            meta={meta}
             totalValidators={totalValidators}
             pubKeyFilter={pubKeyFilter}
             currentPage={currentPage}
+            orderCriteria={orderCriteria}
             setCurrentPageAction={setCurrentPage}
             setPubKeyFilterAction={setPubKeyFilter}
-            onValidatorMonitorAction={onMonitoringValidatorClicked}
+            setOrderCriteriaAction={setOrderCriteria}
+            onValidatorMonitorAction={onMeasureClicked}
           />
         )}
-        {monitoringValidator && (
+        {measuredVote !== null && (
           <ValidatorMonitor
             versions={versions}
             snapshot={snapshot}
             onBackClicked={() => {
-              setMonitoringValidator('');
+              setMeasuredVote(null);
               setPubKeyFilter('');
             }}
           />

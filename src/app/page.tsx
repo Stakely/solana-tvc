@@ -21,6 +21,7 @@ function Home() {
   const {
     epoch,
     snapshot,
+    meta,
     totalValidators,
     currentPage,
     pubKeyFilter,
@@ -48,7 +49,7 @@ function Home() {
         className={`w-full ${isMobile ? 'flex-col' : 'flex'} items-center content-center gap-15`}
       >
         <EpochInfo epoch={epoch} />
-        <ClusterAvg snapshot={snapshot} />
+        <ClusterAvg snapshot={snapshot} cluster={meta?.cluster ?? null} />
       </div>
 
       <div className={'w-full flex'}>

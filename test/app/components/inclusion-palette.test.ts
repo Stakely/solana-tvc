@@ -1,5 +1,7 @@
 import { StakelyTheme } from '@/app/components/theme/design-system.ts';
 import {
+  GRAPH_BACKGROUND,
+  GRAPH_BORDER,
   HATCH,
   LEADER_COLOR,
   NOT_MEASURED_COLOR,
@@ -25,9 +27,8 @@ const colors = StakelyTheme.colors;
 const stripeContrast = (base: Rgb, hatch: string | undefined): number =>
   contrast(over(base, stripePaint(hatch)), base);
 
-// The bars sit on the graph's rgba(0,0,0,0.25) (ValidatorDeltaGraph today,
-// InclusionGraph next), over a dark page colour.
-const GRAPH = 'rgba(0,0,0,0.25)';
+// The bars sit on the frame of InclusionGraph, GRAPH_BACKGROUND, over a dark
+// page colour.
 const PAGES = [
   '#002120', // site theme, background '07'; the page gradient starts here
   '#003835', // site theme, background '05'
@@ -181,6 +182,11 @@ describe('inclusion palette', () => {
     );
   });
 
+  it('uses the decided colours for the frame of the graph', () => {
+    expect(GRAPH_BACKGROUND).toBe('rgba(0,0,0,0.25)');
+    expect(GRAPH_BORDER).toBe('1px solid rgba(255,255,255,0.08)');
+  });
+
   // WCAG 1.4.11 asks 3:1 for the parts of a graphic that carry meaning, and
   // the stripes are the only mark of a shared miss. On a shared red bar of
   // 3 px, the stripes that show are those of the track.
@@ -199,7 +205,7 @@ describe('inclusion palette', () => {
       ratios[name] = stripeContrast(fill, style.backgroundImage);
     }
     for (const page of PAGES) {
-      const graph = over(paint(page).rgb, paint(GRAPH));
+      const graph = over(paint(page).rgb, paint(GRAPH_BACKGROUND));
       const empty = over(graph, paint(track.backgroundColor));
       ratios[`track on ${page}`] = stripeContrast(empty, track.backgroundImage);
     }

@@ -9,6 +9,8 @@ import {
   migrationNotice,
   minStakeText,
   statusHelp,
+  windowLabel,
+  windowSlots,
   windowText,
 } from '@/app/components/measure-texts.ts';
 
@@ -127,6 +129,27 @@ describe('measure texts', () => {
         shared: false,
       })
     ).toBe('No paying blocks');
+  });
+
+  it('names the monitor bars and the slots of each one', () => {
+    expect(MONITOR_TEXT.barsCaption).toBe('One bar per interval');
+    expect(MONITOR_TEXT.barsGroup).toBe('Measured intervals');
+    const window = {
+      kind: 'measured',
+      included: 7,
+      payable: 10,
+      shared: true,
+      fromSlot: 1024,
+      toSlot: 1036,
+    } as const;
+    expect(windowSlots(window)).toBe('Slots 1024–1036');
+    // The hover text of the bar (spec §6.2) and its slots, on one line.
+    expect(windowLabel(window)).toBe(
+      'Counted in 7 of 10 blocks, slots 1024–1036'
+    );
+    expect(windowLabel({ ...window, kind: 'leader', included: 0 })).toBe(
+      'Produced a block (left out), slots 1024–1036'
+    );
   });
 
   it('announces the first measured epoch after the migration', () => {

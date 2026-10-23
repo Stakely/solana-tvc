@@ -12,4 +12,5 @@ export * from './VersionInfo.tsx';
 export * from './HelpTooltip.tsx';
 export * from './MeasurementBanner.tsx';
 export * from './StatusChip.tsx';
+export * from './InclusionGraph.tsx';
 export * from './ui';

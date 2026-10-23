@@ -3,8 +3,8 @@ import { AppThemeColors } from '@/app/components/theme/theming.ts';
 import { InclusionWindow } from '@/types/measure.ts';
 import { LegendTone } from '@/app/components/measure-texts.ts';
 
-// Colours of the monitor (spec §6.2), shared by the bars, the legend, the
-// tooltips, the status chips and the tests.
+// Colours of the monitor (spec §6.2), shared by the graph frame, the bars, the
+// legend, the tooltips, the status chips and the tests.
 export const LEADER_COLOR = '#9945FF';
 export const NOT_MEASURED_COLOR = 'rgba(255,255,255,0.35)';
 export const OUTLINE = `1px solid ${NOT_MEASURED_COLOR}`;
@@ -17,6 +17,10 @@ export const TRACK_HATCH =
   'repeating-linear-gradient(45deg, rgba(255,255,255,0.45) 0 3px, transparent 3px 6px)';
 // The empty part of a bar (the track above the fill).
 export const TRACK_COLOR = 'rgba(255,255,255,0.10)';
+// The frame behind the bars. The track, and so TRACK_HATCH, is painted over
+// GRAPH_BACKGROUND: the palette test checks the 3:1 of the stripes on it.
+export const GRAPH_BACKGROUND = 'rgba(0,0,0,0.25)';
+export const GRAPH_BORDER = '1px solid rgba(255,255,255,0.08)';
 // The status chips paint their own opaque background, so their labels
 // (13 px bold, not large text) keep WCAG AA contrast, 4.5:1, whatever lies
 // behind them: the table surface, the mobile cards or the page gradient behind

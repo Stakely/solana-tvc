@@ -108,6 +108,27 @@ export function windowText(
   }
 }
 
+const slotRange = (window: Pick<InclusionWindow, 'fromSlot' | 'toSlot'>) =>
+  `${window.fromSlot}–${window.toSlot}`;
+
+// Second line of a monitor bar's hover text: "Slots 1012–1024".
+export function windowSlots(
+  window: Pick<InclusionWindow, 'fromSlot' | 'toSlot'>
+): string {
+  return `Slots ${slotRange(window)}`;
+}
+
+// Accessible name of a monitor bar: its hover text and its slots, on one
+// line ("Counted in 7 of 10 blocks, slots 1024–1036").
+export function windowLabel(
+  window: Pick<
+    InclusionWindow,
+    'kind' | 'included' | 'payable' | 'shared' | 'fromSlot' | 'toSlot'
+  >
+): string {
+  return `${windowText(window)}, slots ${slotRange(window)}`;
+}
+
 // Spec §6.5: the epoch number comes from the API, never hard-coded.
 export function migrationNotice(epoch: number | null): string {
   const from = epoch === null ? 'the next epoch' : `epoch ${epoch + 1}`;
@@ -122,6 +143,10 @@ export const MONITOR_TEXT = {
   error: 'Could not reach the server. Retrying…',
   // Under review or in the migration epoch the banner above explains why.
   hidden: 'No numbers while the notice above is shown.',
+  // Legend caption of the bars, next to the HELP.monitorBar tooltip.
+  barsCaption: 'One bar per interval',
+  // Accessible name of the group of bars.
+  barsGroup: 'Measured intervals',
 } as const;
 
 export type LegendTone =

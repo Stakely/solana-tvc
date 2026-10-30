@@ -359,11 +359,15 @@ export const Table = <T,>({
               minWidth: c.minWidth,
               display: 'flex',
               flexDirection: 'row',
+              justifyContent: getColumnAlignment(c),
               alignItems: 'center',
             }}
           >
+            {/* minWidth 0 lets a cell wider than its column end in "…"
+                instead of spilling over the next one. */}
             <div
               style={{
+                minWidth: 0,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -510,7 +514,9 @@ export const Table = <T,>({
           width: '100%',
           display: 'flex',
           flexDirection: 'row',
-          padding: rowPadding ?? '0 0 16px 0',
+          // The rows have 8px on each side (p-8): the header keeps them so
+          // its columns line up with the cells.
+          padding: rowPadding ?? '0 8px 16px',
         }}
       >
         {columns.map((c) => (

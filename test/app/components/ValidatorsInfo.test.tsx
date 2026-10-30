@@ -36,10 +36,14 @@ const measuring = (extra: Partial<SnapshotMeta> = {}) =>
 const NBSP = String.fromCharCode(0xa0);
 
 // The Table cell (header or row) around an element: the nearest box with a
-// minimum width.
+// minimum width. The box inside each cell has min-width 0 so long content
+// ends in "…"; it does not count.
+const hasMinWidth = (node: HTMLElement) =>
+  node.style.minWidth !== '' && parseFloat(node.style.minWidth) !== 0;
+
 function cellOf(element: HTMLElement): HTMLElement {
   let node: HTMLElement | null = element;
-  while (node !== null && node.style.minWidth === '') {
+  while (node !== null && !hasMinWidth(node)) {
     node = node.parentElement;
   }
   if (node === null) throw new Error('no table cell around the element');
@@ -441,6 +445,22 @@ describe('ValidatorsInfo', () => {
     expect(cellOf(screen.getByText('99.00%')).style.minWidth).toBe(
       columnMinWidth('votesCounted')
     );
+  });
+
+  it('lines each cell up like its header and cuts long content with "…"', () => {
+    renderTable([validator()], measuring());
+    expect(cellOf(screen.getByText('Missed'))).toHaveStyle({
+      justifyContent: 'center',
+    });
+    expect(cellOf(screen.getByText('0.9994'))).toHaveStyle({
+      justifyContent: 'center',
+    });
+    const measure = cellOf(screen.getByRole('button', { name: 'Measure' }));
+    expect(measure).toHaveStyle({ justifyContent: 'end' });
+    expect(measure.firstElementChild).toHaveStyle({
+      minWidth: '0',
+      overflow: 'hidden',
+    });
   });
 
   it('keeps every header on one line and off its neighbours', () => {

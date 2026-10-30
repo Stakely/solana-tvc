@@ -80,14 +80,22 @@ export const EpochInfo: FC<EpochInfoProps> = ({ epoch }) => {
   const remainingMs = deadlineMs == null ? 0 : Math.max(0, deadlineMs - nowMs);
   const remainingHms = useMemo(() => msToHms(remainingMs), [remainingMs]);
 
-  const animatedSlotIndex = useAnimatedNumber(epoch?.slotIndex ?? 0, 1500);
+  // A new reading comes every poll: rolling over the whole interval keeps the
+  // counters moving instead of jumping once every few seconds.
+  const animatedSlotIndex = useAnimatedNumber(
+    epoch?.slotIndex ?? 0,
+    MEASURE.measurePollMs
+  );
   const animatedTransactionCount = useAnimatedBigInt(
     epoch?.transactionCount ?? '0',
-    1500
+    MEASURE.measurePollMs
   );
   return (
     <Surface
       width={'100%'}
+      // auto, not the default 100%: the row stretches both cards to the
+      // taller one.
+      height={'auto'}
       padding={'20px 30px'}
       border={true}
       borderColor={colors.background['03']}

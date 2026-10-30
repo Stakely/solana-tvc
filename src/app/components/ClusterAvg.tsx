@@ -11,7 +11,7 @@ import { HELP } from '@/app/components/measure-texts.ts';
 
 type ClusterAvgProps = {
   snapshot: Snapshot | null;
-  // Last window of the measurement, only while someone measures.
+  // Last window of the measurement; null until the first one is measured.
   cluster?: ClusterView | null;
 };
 
@@ -38,6 +38,9 @@ export const ClusterAvg: FC<ClusterAvgProps> = ({ snapshot, cluster }) => {
   return (
     <Surface
       width={'100%'}
+      // auto, not the default 100%: the row stretches both cards to the
+      // taller one.
+      height={'auto'}
       padding={'20px 30px'}
       border={true}
       borderColor={colors.background['03']}
@@ -93,8 +96,9 @@ export const ClusterAvg: FC<ClusterAvgProps> = ({ snapshot, cluster }) => {
             />
           </div>
         </div>
-        {cluster && (
-          <div className={'w-full flex gap-30 items-center'}>
+        {/* Always there, "…" until the first interval: the card keeps its
+            height when the measurement starts. */}
+        <div className={'w-full flex gap-30 items-center'}>
             <div className={'flex-col gap-15 w-full'}>
               <div className={'w-full flex items-center gap-5'}>
                 <Text content={'Paying blocks (last interval): '} />
@@ -102,7 +106,7 @@ export const ClusterAvg: FC<ClusterAvgProps> = ({ snapshot, cluster }) => {
               </div>
               <Text
                 color={colors.background['02']}
-                content={String(cluster.payable)}
+                content={cluster ? String(cluster.payable) : '…'}
               />
             </div>
             <div className={'flex-col gap-15 w-full'}>
@@ -112,15 +116,16 @@ export const ClusterAvg: FC<ClusterAvgProps> = ({ snapshot, cluster }) => {
               </div>
               <Text
                 color={
-                  cluster.alert
+                  cluster?.alert
                     ? colors.secondary.yellowMedium
                     : colors.background['02']
                 }
-                content={formatPercent(cluster.stakeShareMissed, 1)}
+                content={
+                  cluster ? formatPercent(cluster.stakeShareMissed, 1) : '…'
+                }
               />
             </div>
           </div>
-        )}
       </div>
     </Surface>
   );

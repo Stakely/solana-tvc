@@ -47,8 +47,10 @@ function Home() {
   }, []);
   return (
     <div className={'w-full flex-col gap-20 p-b-20'}>
+      {/* Side by side, both cards take the height of the taller one. */}
       <div
-        className={`w-full ${isMobile ? 'flex-col' : 'flex'} items-center content-center gap-15`}
+        className={`w-full ${isMobile ? 'flex-col items-center' : 'flex'} content-center gap-15`}
+        style={isMobile ? undefined : { alignItems: 'stretch' }}
       >
         <EpochInfo epoch={epoch} />
         <ClusterAvg snapshot={snapshot} cluster={meta?.cluster ?? null} />

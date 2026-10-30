@@ -21,9 +21,10 @@ describe('ClusterAvg', () => {
     ).toBeInTheDocument();
   });
 
-  it('hides them when nobody measures', () => {
+  it('keeps them, with "…", until the first interval is measured', () => {
     renderUi(<ClusterAvg snapshot={snapshot([validator()])} cluster={null} />);
-    expect(screen.queryByText(/Paying blocks/)).toBeNull();
+    expect(screen.getByText(/Paying blocks/)).toBeInTheDocument();
+    expect(screen.getAllByText('…')).toHaveLength(2);
   });
 
   it('shows no "undefined" before the first snapshot', () => {

@@ -11,6 +11,11 @@ export function useAnimatedNumber(target: number, durationMs = 650) {
     const to = target;
 
     if (from === to) return;
+    // The first reading is shown as is, not counted up from zero.
+    if (from === 0) {
+      setValue(to);
+      return;
+    }
 
     const start = performance.now();
 

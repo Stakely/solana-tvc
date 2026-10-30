@@ -318,6 +318,40 @@ describe('ValidatorsInfo', () => {
     ).toBeInTheDocument();
   });
 
+  it('keeps the header in step with the rows when measuring starts and stops', () => {
+    const props = {
+      snapshot: snapshot([
+        validator({
+          inclusion: { status: 'ok', included: 100, payable: 100, missed: 0 },
+        }),
+      ]),
+      totalValidators: 1,
+      currentPage: 1,
+      pubKeyFilter: '',
+      orderCriteria: null,
+      setCurrentPageAction: jest.fn(),
+      setPubKeyFilterAction: jest.fn(),
+      setOrderCriteriaAction: jest.fn(),
+      onValidatorMonitorAction: jest.fn(),
+    };
+    const headers = () =>
+      [...cellOf(screen.getByText('Rank')).parentElement!.parentElement!.children].map(
+        (cell) => cell.textContent
+      );
+    const view = renderUi(<ValidatorsInfo {...props} meta={meta()} />);
+    const idle = headers();
+    expect(idle).toContain('Commission');
+    expect(idle.some((h) => h?.startsWith('Votes counted'))).toBe(false);
+
+    view.rerender(<ValidatorsInfo {...props} meta={measuring()} />);
+    const busy = headers();
+    expect(busy).toHaveLength(idle.length + 2);
+    expect(busy.indexOf('Missed')).toBe(busy.indexOf('Commission') - 1);
+
+    view.rerender(<ValidatorsInfo {...props} meta={meta()} />);
+    expect(headers()).toEqual(idle);
+  });
+
   it('hides the epoch ratio while the measurement is under review', () => {
     renderTable(
       [validator()],

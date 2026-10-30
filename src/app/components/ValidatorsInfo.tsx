@@ -571,6 +571,11 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
   const rows = (snapshot?.validators ?? []).map((v) =>
     validatorRow(v, mode, isMobile ? 15 : 20)
   );
+  const columns = isMobile ? mobileColumns : desktopColumns;
+  // When Votes counted and Missed come and go (someone starts or stops
+  // measuring) the header kept the labels of the old columns while the rows
+  // moved on. A new set of columns mounts a new Table.
+  const columnsKey = columns.map((c) => String(c.prop)).join('|');
 
   return (
     <Surface
@@ -606,8 +611,9 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
         >
           <div style={{ minWidth: isMobile ? undefined : tableMinWidth(mode) }}>
             <Table
+              key={columnsKey}
               itemsPerPage={15}
-              columns={isMobile ? mobileColumns : desktopColumns}
+              columns={columns}
               data={rows}
               mobile={{
                 useCards: true,

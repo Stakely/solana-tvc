@@ -84,7 +84,10 @@ export const EpochInfo: FC<EpochInfoProps> = ({ epoch }) => {
   // The server reads the epoch every 5 s or so and the page polls every 5 s,
   // so a new value comes every 5 to 10 s: the counters move at the measured
   // rate in between instead of jumping.
-  const animatedSlotIndex = useLiveCounter(epoch?.slotIndex ?? 0);
+  const animatedSlotIndex = useLiveCounter(
+    epoch?.slotIndex ?? 0,
+    epoch?.slotsInEpoch ?? Infinity
+  );
   const animatedTransactionCount = String(
     useLiveCounter(Number(epoch?.transactionCount ?? 0))
   );

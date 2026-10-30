@@ -49,6 +49,16 @@ describe('useLiveCounter', () => {
     expect(result.current).toBeGreaterThanOrEqual(before);
   });
 
+  it('does not carry the value past its cap', () => {
+    const { result, rerender } = renderHook(({ t }) => useLiveCounter(t, 432_000), {
+      initialProps: { t: 431_000 },
+    });
+    advance(5_000);
+    rerender({ t: 431_990 }); // about 0.2 slots per ms: 432000 within 1 s
+    advance(10_000);
+    expect(result.current).toBe(432_000);
+  });
+
   it('starts over when the target goes back (a new epoch)', () => {
     const { result, rerender } = renderHook(({ t }) => useLiveCounter(t), {
       initialProps: { t: 431_000 },

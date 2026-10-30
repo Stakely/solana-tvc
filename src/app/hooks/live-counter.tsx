@@ -12,8 +12,10 @@ const MAX_AHEAD_MS = 15_000;
 // when a new one comes every 5 to 10 s. It never goes down while the target
 // keeps growing: if it ran ahead, it waits for the readings to catch up. A
 // target below the previous one (a new epoch for the slot index) starts
-// over. The first reading is shown as is, not counted up from zero.
-export function useLiveCounter(target: number): number {
+// over. The first reading is shown as is, not counted up from zero. `max`
+// caps the carried value (the slots of the epoch: the slot index must not
+// pass them while the next epoch's reading is on its way).
+export function useLiveCounter(target: number, max = Infinity): number {
   const [value, setValue] = useState(target);
   const readings = useRef<Reading[]>([]);
   const shown = useRef(target);
@@ -44,14 +46,16 @@ export function useLiveCounter(target: number): number {
           ? (last.v - first.v) / (last.t - first.t)
           : 0;
       const ahead = Math.min(Date.now() - last.t, MAX_AHEAD_MS);
-      const next = Math.floor(Math.max(shown.current, last.v + rate * ahead));
+      const next = Math.floor(
+        Math.max(shown.current, Math.min(max, last.v + rate * ahead))
+      );
       if (next !== shown.current) {
         shown.current = next;
         setValue(next);
       }
     }, STEP_MS);
     return () => clearInterval(id);
-  }, []);
+  }, [max]);
 
   return value;
 }

@@ -464,6 +464,11 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
   setOrderCriteriaAction,
   onValidatorMonitorAction,
 }) => {
+  // Out of the React Compiler: the Table calls the header and cell functions
+  // below as plain functions, not mounted as components. Named like
+  // components, they got a memo cache that lived in the Table and kept
+  // serving the header of the first render.
+  'use no memo';
   const { colors } = useTheme();
   const isMobile = useIsMobile();
 

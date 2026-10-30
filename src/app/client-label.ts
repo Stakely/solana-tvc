@@ -16,5 +16,7 @@ const LABELS: Record<string, string> = {
 
 export function clientLabel(clientId: string | undefined): string {
   if (!clientId) return '';
+  // Ids the RPC does not know come as "Unknown(28598)".
+  if (clientId.startsWith('Unknown')) return 'Unknown';
   return LABELS[clientId] ?? clientId.replace(/([a-z])([A-Z])/g, '$1 $2');
 }

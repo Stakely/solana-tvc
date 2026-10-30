@@ -10,6 +10,7 @@ describe('clientLabel', () => {
 
   it('splits an unknown id into words and is empty without one', () => {
     expect(clientLabel('SomeNewClient')).toBe('Some New Client');
+    expect(clientLabel('Unknown(28598)')).toBe('Unknown');
     expect(clientLabel(undefined)).toBe('');
     expect(clientLabel('')).toBe('');
   });

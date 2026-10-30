@@ -52,7 +52,9 @@ function useContainerWidth<T extends HTMLElement>() {
 const GraphLegend: FC = () => {
   const { colors } = useTheme();
   return (
-    <div className={'w-full flex flex-wrap items-center gap-15'}>
+    // 10px between items keeps the whole legend on one line on a desktop
+    // card; narrower screens wrap it.
+    <div className={'w-full flex flex-wrap items-center gap-10'}>
       <div className={'flex items-center gap-5'}>
         <Text variant={'littleBody'} content={MONITOR_TEXT.barsCaption} />
         <HelpTooltip text={HELP.monitorBar} size={'16px'} />

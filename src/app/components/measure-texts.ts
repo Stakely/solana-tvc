@@ -42,7 +42,7 @@ export function minStakeText(minMeasurableStake: string | null): string {
 
 // Appendix A.2, plus the two figures of the cluster card (spec §6.2).
 export const HELP = {
-  votesCounted: `Vote inclusion rate: share of the paying blocks in the period shown in the header (up to ${RECENT_PERIOD}) that included this validator's vote. Counted from its rewards, not estimated.`,
+  votesCounted: `VIR, the vote inclusion rate: share of the paying blocks in the period shown in the header (up to ${RECENT_PERIOD}) that included this validator's vote. Counted from its rewards, not estimated.`,
   missed: `Paying blocks in the same period that did not include this validator's vote. Hatched (shared) misses are included.`,
   epochRatio: `Earned so far this epoch ÷ the most its stake could have earned, own leader slots included. Healthy validators sit around 0.999. Updated ${RATIO_REFRESH}.`,
   epochRatioPending: `"…": still learning this validator's reward per block. "—": we could not learn it this epoch.`,
@@ -53,7 +53,6 @@ export const HELP = {
   hatched: `Other validators holding at least ${SHARED_PERCENT} of the stake missed the same number of blocks here, so the leader is the likely cause. Not held against this validator.`,
   clusterBanner: `Validators holding at least ${CLUSTER_PERCENT} of the stake missed blocks in the last interval: a leader or cluster problem.`,
   underReview: `Our method no longer matches how rewards are recorded; numbers are hidden until we update it.`,
-  lastVote: `Latest slot in which this validator's vote was counted. A few slots behind the cluster is normal.`,
   skipRate: `Share of its leader slots so far this epoch in which it produced no block.`,
   clusterPayable: `Paying blocks in the last interval (about ${POLL_SECONDS} s): the blocks that paid the votes of an earlier slot.`,
   clusterMissed: `Share of the measured stake whose vote was left out of at least one paying block in the last interval. The cluster banner appears at ${CLUSTER_PERCENT}.`,
@@ -216,7 +215,7 @@ export function howWeMeasureSections(
       blocks: [
         {
           kind: 'p',
-          text: `The vote inclusion rate (VIR) is the share of paying blocks that included a validator's vote. The <b>Votes counted</b> column shows it as a percentage, and <b>Missed</b> shows how many paying blocks left the vote out. VIR does not depend on stake: a small validator and a large one that are both in every paying block both score 100%. A healthy validator is counted in every paying block, or very close to it, so many validators tie at or near the top.`,
+          text: `The vote inclusion rate (VIR) is the share of paying blocks that included a validator's vote. The <b>VIR</b> column shows it as a percentage, and <b>Missed</b> shows how many paying blocks left the vote out. VIR does not depend on stake: a small validator and a large one that are both in every paying block both score 100%. A healthy validator is counted in every paying block, or very close to it, so many validators tie at or near the top.`,
         },
         {
           kind: 'p',
@@ -224,7 +223,7 @@ export function howWeMeasureSections(
         },
         {
           kind: 'p',
-          text: `Each bar in the monitor is one interval, labelled "counted in X of Y blocks". The monitor also adds up every interval since you opened it. The table shows the result for every validator over the last ${RECENT_PERIOD} of measuring; the column header says how many seconds that covers. Right after the page opens, Votes counted reads "…" until the first intervals are measured. When nobody has the page open, nothing is measured.`,
+          text: `Each bar in the monitor is one interval, labelled "counted in X of Y blocks". The monitor also adds up every interval since you opened it. The table shows the result for every validator over the last ${RECENT_PERIOD} of measuring; the column header says how many seconds that covers. Right after the page opens, VIR reads "…" until the first intervals are measured. When nobody has the page open, nothing is measured.`,
         },
         {
           kind: 'p',
@@ -290,7 +289,7 @@ export function howWeMeasureSections(
         },
         {
           kind: 'p',
-          text: `Differences of a few hundredths of a percent are normal, so positions change often. Use the epoch ratio to compare validators over the epoch, and <b>Votes counted</b> to see what is happening right now. The ratio is updated ${RATIO_REFRESH}. It shows "…" until we know the validator's reward per block, and "—" if we cannot learn it this epoch.`,
+          text: `Differences of a few hundredths of a percent are normal, so positions change often. Use the epoch ratio to compare validators over the epoch, and <b>VIR</b> to see what is happening right now. The ratio is updated ${RATIO_REFRESH}. It shows "…" until we know the validator's reward per block, and "—" if we cannot learn it this epoch.`,
         },
         {
           kind: 'p',

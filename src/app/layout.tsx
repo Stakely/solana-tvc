@@ -67,7 +67,7 @@ export default function RootLayout({
                 <main
                   className="flex-1 w-full p-x-30"
                   style={{
-                    maxWidth: '1280px',
+                    maxWidth: '1410px',
                   }}
                 >
                   {children}

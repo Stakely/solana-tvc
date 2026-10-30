@@ -2,13 +2,18 @@ const LAMPORTS_PER_SOL = 1_000_000_000;
 const LAMPORTS_PER_HUNDRED_SOL = 100n * 1_000_000_000n;
 
 export function formatLamportsToSol(lamportsStr: string): string {
+  return `${formatLamportsCompact(lamportsStr)} SOL`;
+}
+
+// The SOL amount without its unit ("12,3M"), for the Stake column.
+export function formatLamportsCompact(lamportsStr: string): string {
   const cleaned = lamportsStr.replace(/[,\s_]/g, '');
-  if (!/^\d+$/.test(cleaned)) return '0 SOL';
+  if (!/^\d+$/.test(cleaned)) return '0';
 
   const lamports = BigInt(cleaned);
 
   const sol = Number(lamports) / LAMPORTS_PER_SOL;
-  if (!Number.isFinite(sol) || sol <= 0) return '0 SOL';
+  if (!Number.isFinite(sol) || sol <= 0) return '0';
 
   const units = [
     { suffix: '', value: 1 },
@@ -41,7 +46,7 @@ export function formatLamportsToSol(lamportsStr: string): string {
     .replace(/\.0+$/, '')
     .replace('.', ',');
 
-  return `${formatted}${unit.suffix} SOL`;
+  return `${formatted}${unit.suffix}`;
 }
 
 // Share (0 to 1) as a percentage with a dot: 0.9876 → '98.76%'.

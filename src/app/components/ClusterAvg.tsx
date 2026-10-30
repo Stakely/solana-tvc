@@ -18,23 +18,6 @@ type ClusterAvgProps = {
 export const ClusterAvg: FC<ClusterAvgProps> = ({ snapshot, cluster }) => {
   const { colors } = useTheme();
 
-  const versions = snapshot ? Object.entries(snapshot.stakeByVersion) : [];
-  const topStakeVersion = versions.length
-    ? versions.reduce((best, current) =>
-        BigInt(current[1].currentActiveStake) >
-        BigInt(best[1].currentActiveStake)
-          ? current
-          : best
-      )[0]
-    : '-';
-  const topValidatorsVersion = versions.length
-    ? versions.reduce((best, current) =>
-        current[1].currentValidators > best[1].currentValidators
-          ? current
-          : best
-      )[0]
-    : '-';
-
   return (
     <Surface
       width={'100%'}
@@ -72,27 +55,6 @@ export const ClusterAvg: FC<ClusterAvgProps> = ({ snapshot, cluster }) => {
               content={formatLamportsToSol(
                 snapshot?.totalDelinquentStake ?? '0'
               )}
-            />
-          </div>
-        </div>
-        <div className={'w-full flex gap-30 items-center'}>
-          <div className={'flex-col gap-15'} style={{ width: '33%' }}>
-            <div className={'w-full flex items-center gap-5'}>
-              <Text content={'Top stake version: '} />
-              <HelpTooltip text={'Version with the higher % of stake.'} />
-            </div>
-            <Text color={colors.background['02']} content={topStakeVersion} />
-          </div>
-          <div className={'flex-col gap-15'} style={{ width: '67%' }}>
-            <div className={'w-full flex items-center gap-5'}>
-              <Text content={'Top validators version: '} />
-              <HelpTooltip
-                text={'Version with the higher number of validators using it.'}
-              />
-            </div>
-            <Text
-              color={colors.background['02']}
-              content={topValidatorsVersion}
             />
           </div>
         </div>

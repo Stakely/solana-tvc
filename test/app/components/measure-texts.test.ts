@@ -40,7 +40,7 @@ describe('measure texts', () => {
 
   it('renders the Appendix A.2 tooltips with the current constants', () => {
     expect(HELP.votesCounted).toBe(
-      "Vote inclusion rate: share of the paying blocks in the period shown in the header (up to 5 minutes) that included this validator's vote. Counted from its rewards, not estimated."
+      "VIR, the vote inclusion rate: share of the paying blocks in the period shown in the header (up to 5 minutes) that included this validator's vote. Counted from its rewards, not estimated."
     );
     expect(HELP.missed).toBe(
       "Paying blocks in the same period that did not include this validator's vote. Hatched (shared) misses are included."
@@ -71,9 +71,6 @@ describe('measure texts', () => {
     );
     expect(HELP.underReview).toBe(
       'Our method no longer matches how rewards are recorded; numbers are hidden until we update it.'
-    );
-    expect(HELP.lastVote).toBe(
-      "Latest slot in which this validator's vote was counted. A few slots behind the cluster is normal."
     );
     expect(HELP.skipRate).toBe(
       'Share of its leader slots so far this epoch in which it produced no block.'

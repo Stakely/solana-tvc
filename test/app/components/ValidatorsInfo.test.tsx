@@ -184,36 +184,38 @@ describe('columnWidths', () => {
   });
 });
 
-// The widest the desktop table gets: main is at most 1280px wide, minus its
+// The widest the desktop table gets: main is at most 1410px wide, minus its
 // 30px side padding and the card's 30px padding and 1px border on each side.
 // Above 1440px (the 16px root) every table is this wide.
-const WIDEST_TABLE_PX = 1280 - 2 * 30 - 2 * 30 - 2;
+const WIDEST_TABLE_PX = 1410 - 2 * 30 - 2 * 30 - 2;
 // Table rows have 8px of padding on each side.
 const ROW_PADDING_PX = 16;
 const WIDEST_ROW_PX = WIDEST_TABLE_PX - ROW_PADDING_PX;
+// On a 1280px wide screen main fills it: the narrowest table whose columns
+// all keep their share.
+const LAPTOP_ROW_PX = 1280 - 2 * 30 - 2 * 30 - 2 - ROW_PADDING_PX;
 // The root font is 12px up to 1440px wide and 16px above (globals.css).
 const ROOT_FONTS = [12, 16] as const;
 // What every minimum keeps over what was measured, for other browsers.
 const SPARE_PX = 1;
 
 // Room each column needs, in px with the 12px and with the 16px root font,
-// measured with Plus Jakarta Sans in Edge on a replica of the table: its
-// header (12px text with either root) with the help icon, wrapped on up to 3
-// lines, or its widest usual cell, plus the gap to the next column. With
-// less, a header spills over its neighbours or the cell is cut off (Table
-// cells do not grow with their content).
+// measured with Plus Jakarta Sans in Edge on a replica of the table (the
+// one-line headers in Chromium, 28-10-2026): its header (13px text with
+// either root, never wrapped) with the help icon and the sort arrow, or its
+// widest usual cell, plus the gap to the next column. With less, a header
+// spills over its neighbours or the cell is cut off (Table cells do not grow
+// with their content).
 const MEASURED: Record<WidthKey, readonly [number, number]> = {
   ranking: [42, 54], // "#1234"
   identity: [52, 52], // "Identity"
   stake: [65, 85], // "12.3M SOL"
-  epochRatio: [67, 67], // "Epoch" over "ratio" and the help icon
-  votesCounted: [96, 96], // "(VIR) · 300 s" and the help icon
-  missed: [70, 70], // "Missed" and the help icon
-  commission: [80, 80], // "Commission"
-  lastVote: [69, 90], // "412345678"
+  epochRatio: [112, 112], // "Epoch ratio" and the help icon
+  votesCounted: [105, 105], // "VIR · 300 s" and the help icon
+  missed: [85, 85], // "Missed" and the help icon
   // "Version", "26.10.4" with the 16px root, and "Harmonic FD" in 11px.
   version: [68, 68],
-  skipRate: [55, 62], // "Skip" over "rate" and the help icon, and "12.34%"
+  skipRate: [95, 95], // "Skip rate" and the help icon
   status: [120, 145], // the "Not measurable" chip and its help icon
   measure: [106, 123], // the Measure button with its icon
 };
@@ -263,7 +265,7 @@ describe('column minimums', () => {
         expect(inPx(narrowest, rootFont)).toBeCloseTo(expected, 6);
       }
     }
-    expect(shownColumns(tableMode(measuring()))).toHaveLength(12);
+    expect(shownColumns(tableMode(measuring()))).toHaveLength(10);
   });
 
   it('fit in the widest table with either root font, so wide screens never scroll', () => {
@@ -275,14 +277,15 @@ describe('column minimums', () => {
     }
   });
 
-  // A column whose share is below its minimum takes the room from the others:
-  // on the widest table every column, Identity included, keeps its share.
-  it('stay below the column shares on the widest table with either root font', () => {
+  // A column whose share is below its minimum spills over its neighbours (its
+  // width caps the minimum of its content): from a 1280px wide screen up,
+  // every column keeps its minimum within its share.
+  it('stay below the column shares from a 1280px screen up with either root font', () => {
     const squeezed: string[] = [];
     for (const mode of MODES) {
       const widths = columnWidths(mode);
       for (const key of shownColumns(mode)) {
-        const share = (widths[key] / 100) * WIDEST_ROW_PX;
+        const share = (widths[key] / 100) * LAPTOP_ROW_PX;
         for (const rootFont of ROOT_FONTS) {
           if (share < inPx(COLUMN_MIN[key], rootFont)) {
             squeezed.push(`${key} with the ${rootFont}px root`);
@@ -321,12 +324,12 @@ describe('column minimums', () => {
 });
 
 describe('ValidatorsInfo', () => {
-  it('keeps the Votes counted columns, measuring, before the first intervals', () => {
+  it('keeps the VIR columns, measuring, before the first intervals', () => {
     renderTable([validator({ client: 'Firedancer' })], meta());
     expect(screen.queryByText('Earned credits')).toBeNull();
     expect(screen.getByText('0.9994')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: HELP.epochRatio })).toBeInTheDocument();
-    expect(screen.getByText('Votes counted (VIR)')).toBeInTheDocument();
+    expect(screen.getByText('VIR')).toBeInTheDocument();
     expect(screen.getAllByText('…')).toHaveLength(2);
     expect(screen.getByText('Firedancer')).toBeInTheDocument();
   });
@@ -340,7 +343,7 @@ describe('ValidatorsInfo', () => {
       ],
       measuring()
     );
-    expect(screen.getByText('Votes counted (VIR) · 287 s')).toBeInTheDocument();
+    expect(screen.getByText('VIR · 287 s')).toBeInTheDocument();
     expect(screen.getByText('95.00%')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
     expect(screen.getByText('Missing votes')).toBeInTheDocument();
@@ -375,14 +378,14 @@ describe('ValidatorsInfo', () => {
     const view = renderUi(<ValidatorsInfo {...props} meta={measuring()} />);
     const busy = headers();
     expect(busy).toContain('Epoch ratio');
-    expect(busy.indexOf('Missed')).toBe(busy.indexOf('Commission') - 1);
+    expect(busy.indexOf('Missed')).toBe(busy.indexOf('Version') - 1);
 
     const review = meta({ measuring: true, measurement: 'under_review' });
     view.rerender(<ValidatorsInfo {...props} meta={review} />);
     const reviewed = headers();
     expect(reviewed).toHaveLength(busy.length - 1);
     expect(reviewed).not.toContain('Epoch ratio');
-    expect(reviewed.indexOf('Stake')).toBe(reviewed.indexOf('Votes counted (VIR)') - 1);
+    expect(reviewed.indexOf('Stake')).toBe(reviewed.indexOf('VIR') - 1);
 
     view.rerender(<ValidatorsInfo {...props} meta={measuring()} />);
     expect(headers()).toEqual(busy);
@@ -426,8 +429,8 @@ describe('ValidatorsInfo', () => {
       ],
       measuring()
     );
-    expect(cellOf(screen.getByText('Commission')).style.minWidth).toBe(
-      columnMinWidth('commission')
+    expect(cellOf(screen.getByText('Version')).style.minWidth).toBe(
+      columnMinWidth('version')
     );
     expect(cellOf(screen.getByText('Missed')).style.minWidth).toBe(
       columnMinWidth('missed')
@@ -440,42 +443,42 @@ describe('ValidatorsInfo', () => {
     );
   });
 
-  it('keeps a wrapped header off its neighbours, with "(VIR) · N s" whole', () => {
+  it('keeps every header on one line and off its neighbours', () => {
     renderTable([validator()], measuring());
     const missed = screen.getByText('Missed');
-    expect(missed).toHaveStyle({ textAlign: 'center' });
     expect(missed.closest('div')).toHaveStyle({
+      whiteSpace: 'nowrap',
       paddingLeft: '4px',
       paddingRight: '4px',
     });
-    expect(screen.getByText('Votes counted (VIR) · 287 s').textContent).toBe(
-      `Votes counted (VIR)${NBSP}·${NBSP}287${NBSP}s`
+    expect(screen.getByText('Rank').closest('div')).toHaveStyle({
+      whiteSpace: 'nowrap',
+    });
+    expect(screen.getByText('VIR · 287 s').textContent).toBe(
+      `VIR${NBSP}·${NBSP}287${NBSP}s`
     );
   });
 
-  // The 12px of the root font up to 1440px wide, also with the 16px root:
+  // 13px with either root font:
   // the minimums of the columns sized by their header do not grow with it.
-  it('keeps the header text at 12px with either root font', () => {
+  it('keeps the header text at 13px with either root font', () => {
     renderTable([validator()], measuring());
-    // The order buttons outside the table say "Stake" and "Epoch ratio" too.
     const table = within(screen.getByTestId('validators-table'));
     for (const header of [
       'Rank',
       'Identity',
       'Stake',
       'Epoch ratio',
-      'Votes counted (VIR) · 287 s',
+      'VIR · 287 s',
       'Missed',
-      'Commission',
-      'Last vote',
       'Version',
       'Skip rate',
       'Status',
     ]) {
-      expect(table.getByText(header)).toHaveStyle({ fontSize: '12px' });
+      expect(table.getByText(header)).toHaveStyle({ fontSize: '13px' });
     }
     expect(table.getByText('Puffin Validator')).not.toHaveStyle({
-      fontSize: '12px',
+      fontSize: '13px',
     });
   });
 
@@ -494,9 +497,9 @@ describe('ValidatorsInfo', () => {
   it('shows the server default order and sends the one the user picks', () => {
     const actions = renderTable([validator()], measuring());
     expect(
-      screen.getByRole('button', { name: 'Stake', pressed: true })
+      screen.getByRole('button', { name: 'Order by Stake', pressed: true })
     ).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Epoch ratio' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Order by Epoch ratio' }));
     expect(actions.setOrderCriteriaAction).toHaveBeenCalledWith(
       'epochRatio',
       'desc'
@@ -505,21 +508,21 @@ describe('ValidatorsInfo', () => {
 
   it('orders by a column when its header is clicked, and flips on a second click', () => {
     const actions = renderTable([validator()], measuring());
-    fireEvent.click(screen.getByRole('button', { name: 'Order by Commission' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Order by Skip rate' }));
     expect(actions.setOrderCriteriaAction).toHaveBeenLastCalledWith(
-      'commission',
+      'skipRate',
       'asc'
     );
     cleanup();
     const again = renderTable([validator()], measuring(), {
-      orderCriteria: 'commission',
+      orderCriteria: 'skipRate',
       orderDirection: 'asc',
     });
-    const header = screen.getByRole('button', { name: 'Order by Commission' });
+    const header = screen.getByRole('button', { name: 'Order by Skip rate' });
     expect(header).toHaveAttribute('aria-pressed', 'true');
     fireEvent.click(header);
     expect(again.setOrderCriteriaAction).toHaveBeenLastCalledWith(
-      'commission',
+      'skipRate',
       'desc'
     );
   });
@@ -527,7 +530,7 @@ describe('ValidatorsInfo', () => {
   it('does not offer the measured columns as orders when the server cannot rank them', () => {
     renderTable([validator()], meta());
     expect(
-      screen.queryByRole('button', { name: /Order by Votes counted/ })
+      screen.queryByRole('button', { name: /Order by VIR/ })
     ).toBeNull();
     expect(screen.queryByRole('button', { name: 'Order by Missed' })).toBeNull();
     expect(
@@ -541,33 +544,39 @@ describe('ValidatorsInfo', () => {
       meta({ migrationEpoch: true }),
       { orderCriteria: 'epochRatio' }
     );
-    const stake = screen.getByRole('button', { name: 'Stake', pressed: true });
-    expect(stake).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Epoch ratio' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /^Order by/ })).toBeNull();
     expect(screen.queryByRole('img', { name: HELP.epochRatio })).toBeNull();
     expect(
       screen.queryByRole('img', { name: HELP.epochRatioPending })
     ).toBeNull();
-    // Only Votes counted and Missed, with nothing to count.
+    // Only VIR and Missed, with nothing to count.
     expect(screen.getAllByText('—')).toHaveLength(2);
   });
 
-  it('disables the orders the server cannot rank', () => {
-    renderTable([validator()], meta());
-    expect(
-      screen.getByRole('button', { name: 'Stake', pressed: true })
-    ).toBeEnabled();
-    expect(screen.getByRole('button', { name: 'Votes counted' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Epoch ratio' })).toBeEnabled();
-  });
-
-  it('disables votes counted and epoch ratio under review', () => {
+  it('does not order by votes counted or epoch ratio under review', () => {
     renderTable(
       [validator()],
       meta({ measuring: true, measurement: 'under_review' })
     );
-    expect(screen.getByRole('button', { name: 'Votes counted' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: 'Epoch ratio' })).toBeDisabled();
+    expect(
+      screen.queryByRole('button', { name: /Order by VIR/ })
+    ).toBeNull();
+    expect(
+      screen.queryByRole('button', { name: 'Order by Epoch ratio' })
+    ).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Order by Stake' })
+    ).toBeInTheDocument();
+  });
+
+  it('shows the stake without its unit and no Last vote column', () => {
+    renderTable([validator()], measuring());
+    const table = within(screen.getByTestId('validators-table'));
+    expect(table.getByText('1K')).toBeInTheDocument();
+    expect(table.queryByText(/ SOL$/)).toBeNull();
+    expect(table.queryByText('Last vote')).toBeNull();
+    expect(table.queryByText('Commission')).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Order by' })).toBeNull();
   });
 
   it('filters and pages through the server', () => {
@@ -603,7 +612,7 @@ describe('ValidatorsInfo on a phone', () => {
     expect(screen.getByText('95.00%')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
     expect(screen.getByText('Missing votes')).toBeInTheDocument();
-    expect(screen.getByText('Votes counted (VIR) · 287 s')).toBeInTheDocument();
+    expect(screen.getByText('VIR · 287 s')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Measure' })).toBeInTheDocument();
     expect(screen.queryByText(/Commission/)).toBeNull();
     expect(screen.queryByText(/Version/)).toBeNull();
@@ -618,6 +627,6 @@ describe('ValidatorsInfo on a phone', () => {
     expect(screen.getByText('Missed').parentElement?.style.paddingLeft).toBe(
       ''
     );
-    expect(screen.getByText('Missed')).not.toHaveStyle({ fontSize: '12px' });
+    expect(screen.getByText('Missed')).not.toHaveStyle({ fontSize: '13px' });
   });
 });

@@ -1,7 +1,6 @@
 'use client';
 
 import { FC } from 'react';
-import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 import {
   OrderCriteria,
   OrderDirection,
@@ -10,7 +9,11 @@ import {
   defaultDirection,
 } from '@/types/snapshot.ts';
 import { InclusionStatus, SnapshotMeta } from '@/types/measure.ts';
-import { formatLamportsToSol, formatPercent, formatRatio } from '@/app/utils.ts';
+import {
+  formatLamportsCompact,
+  formatPercent,
+  formatRatio,
+} from '@/app/utils.ts';
 import { Paginator } from '@/app/components/ui/Paginator.tsx';
 import { useIsMobile } from '@/app/hooks';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
@@ -59,8 +62,6 @@ export type ValidatorRow = {
   epochRatio: string;
   votesCounted: string;
   missed: string;
-  commission: string;
-  lastVote: string;
   version: string;
   // Short client name (Agave, Jito, Firedancer…), '' when unknown.
   client: string;
@@ -69,7 +70,7 @@ export type ValidatorRow = {
 };
 
 export type TableMode = {
-  // Votes counted and the full status have numbers to show.
+  // VIR and the full status have numbers to show.
   showInclusion: boolean;
   // Not yet: the first intervals since the table was opened are being
   // measured, so the cells read "…" and the status Measuring.
@@ -77,7 +78,7 @@ export type TableMode = {
   showEpochRatio: boolean;
 };
 
-// Votes counted and the full status come while the table is open on this
+// VIR and the full status come while the table is open on this
 // replica and the measurement is trusted (spec §5.1, §6.3); their columns
 // stay in place meanwhile, so the table does not jump. The epoch ratio is
 // hidden under review and in the migration epoch (§4.8, §5.2).
@@ -98,8 +99,6 @@ export type WidthKey =
   | 'epochRatio'
   | 'votesCounted'
   | 'missed'
-  | 'commission'
-  | 'lastVote'
   | 'version'
   | 'skipRate'
   | 'status'
@@ -107,19 +106,19 @@ export type WidthKey =
 
 type FixedWidths = Record<Exclude<WidthKey, 'identity'>, number>;
 
-// Twelve columns: each one gets the smallest quarter percent that holds its
-// minimum on the widest table (1158px, every table above 1440px wide) with
-// either root font, and Identity keeps 15%.
+// Ten columns: each one gets the smallest quarter percent that holds its
+// minimum with either root font on the table of a 1280px wide screen
+// (1158px), so it holds on every wider one up to the widest (1288px), and
+// Identity takes the rest (21%). A column cannot grow past its share: its
+// width caps the minimum of its content.
 const SHARES: FixedWidths = {
   ranking: 5,
   stake: 7.75,
-  epochRatio: 6,
-  votesCounted: 8.5,
-  missed: 6.25,
-  commission: 7.25,
-  lastVote: 8,
+  epochRatio: 10,
+  votesCounted: 9.5,
+  missed: 7.75,
   version: 6.25,
-  skipRate: 5.75,
+  skipRate: 8.5,
   status: 13,
   measure: 11.25,
 };
@@ -140,18 +139,18 @@ const pct = (width: number): Percentage => `${width}%`;
 
 export type ColumnMin = { rem: number; px: number };
 
-// The desktop header text keeps the 12px of the root font up to 1440px wide
-// on wider screens too, where the root is 16px. Grown by a third, the headers
-// of the twelve columns left Identity 11% of the row while measuring. The
-// line height is body1's 1.26rem at the 12px root.
-const HEADER_FONT_SIZE: Pixel = '12px';
+// The desktop header text is 13px with either root font (12px up to 1440px
+// wide, 16px above). Grown by a third, the headers of the twelve columns left
+// Identity 11% of the row while measuring. The line height is body1's 1.26rem
+// at the 12px root.
+const HEADER_FONT_SIZE: Pixel = '13px';
 const HEADER_LINE_HEIGHT = 1.26;
 // The client under the version, at any root font.
 const CLIENT_FONT_SIZE: Pixel = '11px';
 
 // The narrowest each desktop column can get: text that scales with the root
 // font (12px up to 1440px wide, 16px above) in rem, and icons, paddings, the
-// gap to the next column, 1px to spare (4px for the button) and the 12px
+// gap to the next column, 1px to spare (4px for the button) and the 13px
 // header text in px. Measured with Plus Jakarta Sans in a browser with both
 // root sizes. Table cells do not grow with their content: without these
 // minimums a header spills over its neighbours and the Measure button is cut
@@ -159,17 +158,16 @@ const CLIENT_FONT_SIZE: Pixel = '11px';
 export const COLUMN_MIN: Record<WidthKey, ColumnMin> = {
   ranking: { rem: 3, px: 7 }, // "#1234"
   identity: { rem: 4, px: 47 }, // the 32px avatar, its gap and a few letters
-  stake: { rem: 5, px: 6 }, // "12.3M SOL"
-  epochRatio: { rem: 0, px: 68 }, // "Epoch" over "ratio" and the help icon
-  votesCounted: { rem: 0, px: 97 }, // "(VIR) · 300 s", never split
-  missed: { rem: 0, px: 71 }, // "Missed" and the help icon
-  commission: { rem: 0, px: 81 }, // "Commission"
-  lastVote: { rem: 5.25, px: 7 }, // a 9-digit slot
+  stake: { rem: 5, px: 6 }, // "12.3M", still sized for "12.3M SOL"
+  // The sortable headers below keep room for the sort arrow.
+  epochRatio: { rem: 0, px: 113 }, // "Epoch ratio" and the help icon
+  votesCounted: { rem: 0, px: 106 }, // "VIR · 300 s" and the help icon
+  missed: { rem: 0, px: 86 }, // "Missed" and the help icon
   // "Version", "26.10.4" with the 16px root, and the client below it in
   // 11px ("Harmonic FD"); longer ones end in "…".
   version: { rem: 0, px: 69 },
-  // "Skip" over "rate" and the help icon, and "12.34%" with the 16px root.
-  skipRate: { rem: 1.75, px: 35 },
+  // "Skip rate" and the help icon; "12.34%" with the 16px root is narrower.
+  skipRate: { rem: 0, px: 96 },
   status: { rem: 6.25, px: 46 }, // the "Not measurable" chip and its help icon
   measure: { rem: 4.25, px: 59 }, // the Measure button with its icon
 };
@@ -204,7 +202,7 @@ export function tableMinWidth(mode: TableMode): string {
 }
 
 // The order the server applies when the user picked none: stake, so the
-// table does not reorder when Votes counted arrives.
+// table does not reorder when VIR arrives.
 export function defaultOrder(): OrderCriteria {
   return 'stake';
 }
@@ -230,7 +228,7 @@ export function validatorRow(
   if (identity === '') identity = 'Unnamed';
   const inclusion = mode.showInclusion ? v.inclusion : undefined;
   // No paying blocks counted (Not measurable, Delinquent, or none yet):
-  // Votes counted and Missed show "—", not 0 (types/measure.ts). While the
+  // VIR and Missed show "—", not 0 (types/measure.ts). While the
   // first intervals are measured they show "…".
   const counted = inclusion && inclusion.payable > 0 ? inclusion : undefined;
   const noCount = mode.inclusionPending ? '…' : '—';
@@ -241,14 +239,12 @@ export function validatorRow(
     identityPubKey: v.identityPubkey,
     icon: v.info?.info?.iconUrl,
     ranking: v.ranking ? `#${v.ranking}` : '-',
-    stake: formatLamportsToSol(v.activatedStake),
+    stake: formatLamportsCompact(v.activatedStake),
     epochRatio: epochRatioCell(v),
     votesCounted: counted
       ? formatPercent(counted.included / counted.payable, 2)
       : noCount,
     missed: counted ? String(counted.missed) : noCount,
-    commission: `${v.commission}%`,
-    lastVote: String(v.lastVote),
     version: v.version,
     client: clientLabel(v.client),
     skipRate: `${Number.isInteger(skipRate) ? skipRate : skipRate.toFixed(2)}%`,
@@ -262,11 +258,6 @@ export function validatorRow(
   };
 }
 
-const ORDER_OPTIONS: Array<{ value: OrderCriteria; label: string }> = [
-  { value: 'stake', label: 'Stake' },
-  { value: 'inclusion', label: 'Votes counted' },
-  { value: 'epochRatio', label: 'Epoch ratio' },
-];
 
 // A sortable header: clicking it orders the table by its column, and
 // clicking it again flips the direction.
@@ -279,8 +270,8 @@ export type HeaderSort = {
 type HeaderLabelProps = {
   text: string;
   help?: string;
-  // Desktop header row: the text keeps 12px, and a label that wraps fills its
-  // whole cell, so it keeps 4px from each neighbour and centres its lines.
+  // Desktop header row: the text keeps 13px on one line, and a label with a
+  // help icon keeps 4px from each neighbour.
   inHeaderRow: boolean;
   sort?: HeaderSort;
 };
@@ -293,8 +284,14 @@ const PLAIN_BUTTON = {
   color: 'inherit',
   font: 'inherit',
   cursor: 'pointer',
-  position: 'relative',
+  display: 'inline-flex',
+  alignItems: 'center',
+  gap: 3,
+  whiteSpace: 'inherit',
 } as const;
+
+// The desktop headers never wrap: COLUMN_MIN holds each one on a line.
+const ONE_LINE = { whiteSpace: 'nowrap' } as const;
 
 const HeaderLabel: FC<HeaderLabelProps> = ({
   text,
@@ -312,7 +309,7 @@ const HeaderLabel: FC<HeaderLabelProps> = ({
       content={text}
     />
   );
-  // The arrow hangs below the text, so the header keeps its width.
+  // The arrow goes right of the text; COLUMN_MIN keeps room for it.
   const label = sort ? (
     <button
       type={'button'}
@@ -326,10 +323,6 @@ const HeaderLabel: FC<HeaderLabelProps> = ({
         <span
           aria-hidden={'true'}
           style={{
-            position: 'absolute',
-            left: '50%',
-            bottom: -11,
-            transform: 'translateX(-50%)',
             fontSize: 9,
             lineHeight: 1,
             color: colors.primary['03'],
@@ -342,11 +335,13 @@ const HeaderLabel: FC<HeaderLabelProps> = ({
   ) : (
     textLabel
   );
-  if (help === undefined) return label;
+  if (help === undefined) {
+    return inHeaderRow ? <div style={ONE_LINE}>{label}</div> : label;
+  }
   return (
     <div
       className={'flex items-center gap-5'}
-      style={inHeaderRow ? { padding: '0 4px' } : undefined}
+      style={inHeaderRow ? { ...ONE_LINE, padding: '0 4px' } : undefined}
     >
       {label}
       <HelpTooltip text={help} size={'16px'} />
@@ -372,81 +367,6 @@ const VersionCell: FC<{ version: string; client: string }> = ({
           alt={client}
         />
       )}
-    </div>
-  );
-};
-
-type OrderSelectorProps = {
-  value: OrderCriteria;
-  // The whole selector (migration epoch).
-  disabled: boolean;
-  // Orders the server can rank with the current snapshot.
-  available: (criteria: OrderCriteria) => boolean;
-  isMobile: boolean;
-  onChange: (criteria: OrderCriteria) => void;
-};
-
-// The order is the server's (rank, unranked last): no client-side sorting.
-// On a phone the label goes above and the buttons share the full width.
-const OrderSelector: FC<OrderSelectorProps> = ({
-  value,
-  disabled,
-  available,
-  isMobile,
-  onChange,
-}) => {
-  const { colors } = useTheme();
-  return (
-    <div
-      className={isMobile ? 'w-full flex-col gap-10' : 'flex items-center gap-10'}
-      style={isMobile ? undefined : { flexShrink: 0 }}
-    >
-      {/* The filter field takes the rest of the row: the label must not
-          be squeezed onto two lines. */}
-      <div style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
-        <Text color={colors.background['01']} content={'Order by'} />
-      </div>
-      <ToggleButtonGroup
-        exclusive
-        size={'small'}
-        fullWidth={isMobile}
-        value={value}
-        disabled={disabled}
-        aria-label={'Order by'}
-        onChange={(_, next: OrderCriteria | null) => {
-          if (next) onChange(next);
-        }}
-        sx={{
-          '& .MuiToggleButton-root': {
-            color: colors.background['00'],
-            borderColor: colors.background['03'],
-            fontFamily: 'Plus Jakarta Sans',
-            fontWeight: 700,
-            textTransform: 'none',
-            whiteSpace: isMobile ? 'normal' : 'nowrap',
-          },
-          '& .MuiToggleButton-root.Mui-selected, & .MuiToggleButton-root.Mui-selected:hover':
-            {
-              backgroundColor: colors.primary['02'],
-              color: colors.background['00'],
-            },
-          '& .MuiToggleButton-root.Mui-disabled': {
-            color: colors.background['03'],
-          },
-        }}
-      >
-        {ORDER_OPTIONS.map((option) => (
-          // An explicit disabled on a button overrides the group's, so it
-          // carries the group's too.
-          <ToggleButton
-            key={option.value}
-            value={option.value}
-            disabled={disabled || !available(option.value)}
-          >
-            {option.label}
-          </ToggleButton>
-        ))}
-      </ToggleButtonGroup>
     </div>
   );
 };
@@ -487,8 +407,6 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
     order === orderCriteria && orderDirection
       ? orderDirection
       : defaultDirection(order);
-  const pickOrder = (criteria: OrderCriteria) =>
-    setOrderCriteriaAction(criteria, defaultDirection(criteria));
   // A header of the column the table is ordered by flips the direction.
   const sortBy = (criteria: OrderCriteria): HeaderSort | undefined =>
     isMobile || migrationEpoch || !available(criteria)
@@ -571,11 +489,10 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
       ),
   };
   const votesCountedColumn: TableColumn<ValidatorRow> = {
-    // No-break spaces keep "(VIR) · 287 s" on one line when the header wraps.
     label: headerLabel(
       coverage === undefined
-        ? 'Votes counted (VIR)'
-        : `Votes counted (VIR)\u00a0·\u00a0${Math.round(coverage)}\u00a0s`,
+        ? 'VIR'
+        : `VIR\u00a0·\u00a0${Math.round(coverage)}\u00a0s`,
       HELP.votesCounted,
       'inclusion'
     ),
@@ -592,13 +509,6 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
     width: pct(widths.missed),
     minWidth: columnMinWidth('missed'),
     sortable: false,
-  };
-  const lastVoteColumn: TableColumn<ValidatorRow> = {
-    label: headerLabel('Last vote', HELP.lastVote, 'lastVote'),
-    prop: 'lastVote',
-    align: 'center',
-    width: pct(widths.lastVote),
-    minWidth: columnMinWidth('lastVote'),
   };
   const statusColumn: TableColumn<ValidatorRow> = {
     label: 'Status',
@@ -660,14 +570,6 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
     },
     ...measurementColumns,
     {
-      label: headerLabel('Commission', undefined, 'commission'),
-      prop: 'commission',
-      align: 'center',
-      width: pct(widths.commission),
-      minWidth: columnMinWidth('commission'),
-    },
-    lastVoteColumn,
-    {
       label: headerLabel('Version', undefined, 'version'),
       prop: 'version',
       align: 'center',
@@ -697,7 +599,6 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
     { label: 'Rank', prop: 'ranking' },
     { label: 'Stake', prop: 'stake' },
     ...measurementColumns,
-    lastVoteColumn,
     statusColumn,
     measureColumn,
   ];
@@ -706,7 +607,7 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
     validatorRow(v, mode, isMobile ? 15 : 20)
   );
   const columns = isMobile ? mobileColumns : desktopColumns;
-  // When Votes counted and Missed come and go (someone starts or stops
+  // When VIR and Missed come and go (someone starts or stops
   // measuring) the header kept the labels of the old columns while the rows
   // moved on. A new set of columns mounts a new Table.
   const columnsKey = columns.map((c) => String(c.prop)).join('|');
@@ -720,21 +621,10 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
       opacity={0.75}
     >
       <div className={'w-full flex-col gap-15 items-center content-center'}>
-        <div
-          className={`w-full ${isMobile ? 'flex-col' : 'flex'} gap-15 items-center`}
-        >
-          <div className="w-full">
-            <TextField
-              placeholder={'Filter by identity, vote account or name'}
-              updateModel={setPubKeyFilterAction}
-            />
-          </div>
-          <OrderSelector
-            value={order}
-            disabled={migrationEpoch}
-            available={available}
-            isMobile={isMobile}
-            onChange={pickOrder}
+        <div className="w-full">
+          <TextField
+            placeholder={'Filter by identity, vote account or name'}
+            updateModel={setPubKeyFilterAction}
           />
         </div>
         {/* Below its narrowest width the desktop table scrolls sideways

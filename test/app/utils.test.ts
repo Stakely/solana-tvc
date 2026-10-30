@@ -1,9 +1,20 @@
 import {
+  formatLamportsCompact,
+  formatLamportsToSol,
   formatPercent,
   formatRatio,
   formatWholeSol,
   roundLamportsToHundredSol,
 } from '@/app/utils.ts';
+
+describe('formatLamportsCompact', () => {
+  it('prints the SOL amount without its unit', () => {
+    expect(formatLamportsCompact('17000000000000000')).toBe('17M');
+    expect(formatLamportsCompact('12345678000000000')).toBe('12,3M');
+    expect(formatLamportsCompact('0')).toBe('0');
+    expect(formatLamportsToSol('17000000000000000')).toBe('17M SOL');
+  });
+});
 
 describe('formatPercent', () => {
   it('prints a share as a percentage with a dot', () => {

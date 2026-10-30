@@ -216,6 +216,9 @@ describe('Get Snapshot test', () => {
       orderDirection: 'desc',
     });
     expect(ids(response)).toEqual([PUFFIN, SEVEN]);
+    // The fixture only has commissionBps (newer CLIs): it becomes commission.
+    expect(response.snapshot.validators[0].commission).toBe(10);
+    expect(response.snapshot.validators[0]).not.toHaveProperty('commissionBps');
     // 7pR7 is delinquent: no rank under this order either.
     expect(rankings(response)).toEqual([1, undefined]);
   });

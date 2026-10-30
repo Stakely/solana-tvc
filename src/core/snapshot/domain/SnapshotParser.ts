@@ -10,7 +10,12 @@ export class SnapshotParser {
 
   // Parses `solana validators --output json`: quotes the stake fields (they
   // exceed 2^53), checks the shape and fills `commission` from
-  // `commissionBps` on CLI versions that only print the latter.
+  // `commissionBps` on CLI versions that only print the latter, then drops
+  // `commissionBps` so the API serves a single field.
+  //
+  // A validator with neither field gets commission 0 instead of a throw. A
+  // throw would drop the whole snapshot, and with it the table refresh and the
+  // measurement for everyone.
   static parseText(text: string): Snapshot {
     const data = JSON.parse(
       SnapshotParser._quoteBigIntFields(text)
@@ -37,6 +42,7 @@ export class SnapshotParser {
         raw.commission =
           typeof raw.commissionBps === 'number' ? raw.commissionBps / 100 : 0;
       }
+      delete raw.commissionBps;
     }
 
     return data;

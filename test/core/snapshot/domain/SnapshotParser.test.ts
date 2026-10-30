@@ -34,6 +34,7 @@ describe('SnapshotParser.parseText', () => {
       output(validator('"commissionBps": 500, "clientId": "Agave",'))
     );
     expect(snapshot.validators[0].commission).toBe(5);
+    expect(snapshot.validators[0]).not.toHaveProperty('commissionBps');
   });
 
   it('keeps commission when the CLI prints it', () => {
@@ -41,6 +42,15 @@ describe('SnapshotParser.parseText', () => {
       output(validator('"commission": 7, "commissionBps": 700,'))
     );
     expect(snapshot.validators[0].commission).toBe(7);
+    expect(snapshot.validators[0]).not.toHaveProperty('commissionBps');
+  });
+
+  // Not a throw: a throw would drop the whole snapshot, freezing the table and
+  // the measurement for every user, because SnapshotSource shares this parse.
+  it('defaults a missing commission to 0 instead of throwing', () => {
+    const snapshot = SnapshotParser.parseText(output(validator('')));
+    expect(snapshot.validators[0].commission).toBe(0);
+    expect(snapshot.validators[0]).not.toHaveProperty('commissionBps');
   });
 
   it('rejects other shapes', () => {

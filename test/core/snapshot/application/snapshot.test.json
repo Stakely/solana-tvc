@@ -27,7 +27,7 @@
   "validators": [
     {
       "activatedStake": "1000",
-      "commission": 10,
+      "commissionBps": 1000,
       "credits": 50,
       "delinquent": false,
       "epochCredits": 50,

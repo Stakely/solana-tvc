@@ -101,9 +101,14 @@ export class MeasureService {
     return this._now() - this._lastMeasureAt <= MEASURE.measuringWindowMs;
   }
 
+  // Only a vote account in the snapshot keeps the measuring window open: a
+  // made-up pubkey must not hold the server in measuring mode.
   async measure(vote: string): Promise<MeasureResponse> {
-    this._lastMeasureAt = this._now();
-    await this._fresh(MEASURE.snapshotTtlMs);
+    const taken = await this._deps.source.get(MEASURE.snapshotTtlMs);
+    if (taken.snapshot.validators.some((v) => v.voteAccountPubkey === vote)) {
+      this._lastMeasureAt = this._now();
+    }
+    await this._serial(() => this._ingest(taken));
     this.kick();
     return this._view(vote);
   }

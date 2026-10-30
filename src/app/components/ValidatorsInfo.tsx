@@ -338,8 +338,13 @@ const OrderSelector: FC<OrderSelectorProps> = ({
   return (
     <div
       className={isMobile ? 'w-full flex-col gap-10' : 'flex items-center gap-10'}
+      style={isMobile ? undefined : { flexShrink: 0 }}
     >
-      <Text color={colors.background['01']} content={'Order by'} />
+      {/* The filter field takes the rest of the row: the label must not
+          be squeezed onto two lines. */}
+      <div style={{ whiteSpace: 'nowrap', flexShrink: 0 }}>
+        <Text color={colors.background['01']} content={'Order by'} />
+      </div>
       <ToggleButtonGroup
         exclusive
         size={'small'}

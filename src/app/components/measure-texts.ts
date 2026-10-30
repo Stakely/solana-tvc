@@ -220,11 +220,11 @@ export function howWeMeasureSections(
         },
         {
           kind: 'p',
-          text: `When you click <b>Measure</b>, we read every validator's reward counter from a Solana RPC server (a server that answers queries about the chain) about every ${POLL_SECONDS} seconds. We call the time between two readings an <b>interval</b>. For each interval we work out how many paying blocks there were (the same number for every validator) and how many of them included each validator's vote. Each validator earns its own fixed amount for every block that includes its vote. So, if it produced no block in the interval, the increase in its counter divided by that amount is the number of blocks that included it. It is a count, not an estimate.`,
+          text: `While this page is open, we read every validator's reward counter from a Solana RPC server (a server that answers queries about the chain) about every ${POLL_SECONDS} seconds. We call the time between two readings an <b>interval</b>. For each interval we work out how many paying blocks there were (the same number for every validator) and how many of them included each validator's vote. Each validator earns its own fixed amount for every block that includes its vote. So, if it produced no block in the interval, the increase in its counter divided by that amount is the number of blocks that included it. It is a count, not an estimate.`,
         },
         {
           kind: 'p',
-          text: `Each bar in the monitor is one interval, labelled "counted in X of Y blocks". The monitor also adds up every interval since you opened it. The table shows the result over the last ${RECENT_PERIOD} of measuring; the column header says how many seconds that covers. When you measure, we measure every validator at once, so the table also shows Votes counted for all of them.`,
+          text: `Each bar in the monitor is one interval, labelled "counted in X of Y blocks". The monitor also adds up every interval since you opened it. The table shows the result for every validator over the last ${RECENT_PERIOD} of measuring; the column header says how many seconds that covers. Right after the page opens, Votes counted reads "…" until the first intervals are measured. When nobody has the page open, nothing is measured.`,
         },
         {
           kind: 'p',
@@ -254,7 +254,7 @@ export function howWeMeasureSections(
       blocks: [
         {
           kind: 'p',
-          text: `Statuses appear while someone is measuring. Otherwise the table shows only whether a validator is delinquent.`,
+          text: `Statuses appear once the first intervals since the page opened are measured; until then they read Measuring. Under review and in the migration epoch the table shows only whether a validator is delinquent.`,
         },
         {
           kind: 'ul',

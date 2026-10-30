@@ -68,6 +68,24 @@ function readAccountData(result: unknown): Uint8Array | null {
   throw new Error('getAccountInfo: unexpected result shape');
 }
 
+// identity -> clientId for the nodes that report one.
+function readClusterClients(result: unknown): Map<string, string> {
+  if (!Array.isArray(result)) {
+    throw new Error('getClusterNodes: unexpected result shape');
+  }
+  const byIdentity = new Map<string, string>();
+  for (const node of result) {
+    if (
+      isRecord(node) &&
+      typeof node.pubkey === 'string' &&
+      typeof node.clientId === 'string'
+    ) {
+      byIdentity.set(node.pubkey, node.clientId);
+    }
+  }
+  return byIdentity;
+}
+
 // JSON-RPC calls the CLI does not offer cheaply, sent to the same RPC_URLS
 // with the same fallback order (spec §3).
 export class SolanaRpc {
@@ -103,6 +121,10 @@ export class SolanaRpc {
       [address, { encoding: 'base64', commitment: 'confirmed' }],
       readAccountData
     );
+  }
+
+  async clusterClients(): Promise<Map<string, string>> {
+    return this._call('getClusterNodes', [], readClusterClients);
   }
 
   // Reading the result happens inside the fallback loop: a reply that cannot

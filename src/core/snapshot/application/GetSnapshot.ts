@@ -11,7 +11,15 @@ import { ValidatorSnapshotFreshener } from '@/core/snapshot/domain/ValidatorSnap
 import { ValidatorInfoFreshener } from '@/core/snapshot/domain/ValidatorInfoFreshener.ts';
 
 export interface SnapshotExtrasProvider {
+  // Someone has the table open: measure while they look (the request
+  // already refreshes the snapshot, so it costs no extra CLI call).
+  watch?(): void;
   tableExtras(): SnapshotExtras;
+}
+
+export interface ClientsProvider {
+  refresh(): Promise<void>;
+  clientOf(identity: string): string | undefined;
 }
 
 export class GetSnapshot extends ApplicationService {
@@ -19,7 +27,8 @@ export class GetSnapshot extends ApplicationService {
     private readonly _query: SnapshotQuery,
     private readonly _freshener: ValidatorSnapshotFreshener,
     private readonly _infoFreshener: ValidatorInfoFreshener,
-    private readonly _extras?: SnapshotExtrasProvider
+    private readonly _extras?: SnapshotExtrasProvider,
+    private readonly _clients?: ClientsProvider
   ) {
     super();
   }
@@ -29,16 +38,15 @@ export class GetSnapshot extends ApplicationService {
       this._freshener.ensureFresh(),
       this._infoFreshener.ensureFresh(),
     ]).catch((error) => console.error('snapshot refresh failed', error));
+    void this._clients?.refresh();
 
+    this._extras?.watch?.();
     const extras = this._extras?.tableExtras();
-    const ranksByInclusion =
-      !!extras &&
-      extras.meta.measuring &&
-      !extras.meta.migrationEpoch &&
-      extras.meta.measurement === 'ok';
 
+    // Stake by default: Votes counted arrives a few seconds after the page
+    // opens, and ranking by it then would reorder the table under the user.
     const order: SnapshotQueryOrder = {
-      criteria: args.orderCriteria ?? (ranksByInclusion ? 'inclusion' : 'stake'),
+      criteria: args.orderCriteria ?? 'stake',
       direction: args.orderDirection ?? 'desc',
     };
 
@@ -52,6 +60,8 @@ export class GetSnapshot extends ApplicationService {
     }
 
     const query = new SnapshotQueryArgs(order, size, page, filter);
-    return this._query.query(query, extras);
+    return this._query.query(query, extras, (identity) =>
+      this._clients?.clientOf(identity)
+    );
   }
 }

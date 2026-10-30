@@ -94,6 +94,22 @@ const METHODS: Method[] = [
       ['data whose payload is not a string', ok({ value: { data: [7, 'x'] } })],
     ],
   },
+  {
+    name: 'clusterClients',
+    rpcMethod: 'getClusterNodes',
+    call: (rpc) => rpc.clusterClients(),
+    // A node without clientId (older versions) is left out.
+    good: ok([
+      { pubkey: 'n1', clientId: 'JitoLabs', version: '4.3.2' },
+      { pubkey: 'n2', version: '2.0.0' },
+      { pubkey: 'n3', clientId: 'Firedancer' },
+    ]),
+    expected: new Map([
+      ['n1', 'JitoLabs'],
+      ['n3', 'Firedancer'],
+    ]),
+    malformed: [['a result that is not an array', ok({ value: [] })]],
+  },
 ];
 
 describe('SolanaRpc', () => {

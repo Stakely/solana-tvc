@@ -9,8 +9,15 @@ const query = Factory.SnapshotQuery();
 const refresher = Factory.ValidatorSnapshotFreshener();
 const infoRefresher = Factory.ValidatorInfoFreshener();
 const measure = Factory.MeasureService();
+const clients = Factory.ClientDirectory();
 
-const appService = new GetSnapshot(query, refresher, infoRefresher, measure);
+const appService = new GetSnapshot(
+  query,
+  refresher,
+  infoRefresher,
+  measure,
+  clients
+);
 
 export async function GET(req: Request) {
   const url = new URL(req.url);

@@ -4,6 +4,7 @@
 
 import path from 'path';
 import {
+  ClientsProvider,
   GetSnapshot,
   SnapshotExtrasProvider,
 } from '@/core/snapshot/application/GetSnapshot.ts';
@@ -28,7 +29,11 @@ const SEVEN_VOTE = '59k9CiZ7L1bpEivLrAtaMPMgw18syZ4RQsJUo3hbbj8x';
 
 // Fixture: puffin (stake 1000, commission 10) and 7pR7 (stake 2000,
 // commission 0, delinquent). `parser` replaces the snapshot of the fixture.
-function build(extras?: SnapshotExtrasProvider, parser?: SnapshotParser) {
+function build(
+  extras?: SnapshotExtrasProvider,
+  parser?: SnapshotParser,
+  clients?: ClientsProvider
+) {
   const dir = path.join(process.cwd(), 'test/core/snapshot/application');
   const query = new SnapshotQuery(
     parser ?? new SnapshotParser(path.join(dir, 'snapshot.test.json')),
@@ -44,7 +49,8 @@ function build(extras?: SnapshotExtrasProvider, parser?: SnapshotParser) {
     query,
     noopFreshener() as unknown as ValidatorSnapshotFreshener,
     noopFreshener() as unknown as ValidatorInfoFreshener,
-    extras
+    extras,
+    clients
   );
   return (args: GetSnapshotArgs) =>
     appService.exec(args) as Promise<GetSnapshotResponse>;
@@ -165,14 +171,26 @@ describe('Get Snapshot test', () => {
     }
   });
 
-  it('orders by votes counted while someone is measuring', async () => {
-    // By votes counted the status, not the CLI flag, decides the rank.
+  it('orders by stake by default, also while someone is measuring', async () => {
+    // Votes counted arrives a few seconds after the page opens: ranking by
+    // it by default would reorder the table under the user.
     const response = await build(
       extras(true, {
         [PUFFIN_VOTE]: { status: 'ok', included: 99 },
         [SEVEN_VOTE]: { status: 'ok', included: 100 },
       })
     )({});
+    expect(ids(response)).toEqual([PUFFIN, SEVEN]);
+  });
+
+  it('orders by votes counted on request while someone is measuring', async () => {
+    // By votes counted the status, not the CLI flag, decides the rank.
+    const response = await build(
+      extras(true, {
+        [PUFFIN_VOTE]: { status: 'ok', included: 99 },
+        [SEVEN_VOTE]: { status: 'ok', included: 100 },
+      })
+    )({ orderCriteria: 'inclusion' });
     expect(ids(response)).toEqual([SEVEN, PUFFIN]);
     expect(response.instance).toBe('test');
     expect(response.measuring).toBe(true);
@@ -187,6 +205,28 @@ describe('Get Snapshot test', () => {
     const response = await build(extras(true, {}, meta))({});
     expect(ids(response)).toEqual([PUFFIN, SEVEN]);
     expect(response.snapshot.validators[0].ranking).toBe(1);
+  });
+
+  it('measures while someone looks at the table', async () => {
+    const provider = extras(false, {});
+    const watch = jest.fn();
+    await build({ ...provider, watch })({});
+    expect(watch).toHaveBeenCalledTimes(1);
+  });
+
+  it('adds the client of each identity and refreshes the client table', async () => {
+    const clients = {
+      refresh: jest.fn(async () => undefined),
+      clientOf: (identity: string) =>
+        identity === PUFFIN ? 'JitoLabs' : undefined,
+    };
+    const response = await build(undefined, undefined, clients)({});
+    const byIdentity = new Map(
+      response.snapshot.validators.map((v) => [v.identityPubkey, v.client])
+    );
+    expect(byIdentity.get(PUFFIN)).toBe('JitoLabs');
+    expect(byIdentity.get(SEVEN)).toBeUndefined();
+    expect(clients.refresh).toHaveBeenCalledTimes(1);
   });
 
   it('orders by epoch ratio on request, delinquent validators last', async () => {

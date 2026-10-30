@@ -13,6 +13,7 @@ import { ValidatorSnapshotFreshener } from '@/core/snapshot/domain/ValidatorSnap
 import { SolanaCli } from '@/core/solana/SolanaCli.ts';
 import { EpochFreshener } from '@/core/epoch/domain/EpochFreshener.ts';
 import { ValidatorInfoFreshener } from '@/core/snapshot/domain/ValidatorInfoFreshener.ts';
+import { ClientDirectory } from '@/core/snapshot/domain/ClientDirectory.ts';
 import { SnapshotSource } from '@/core/snapshot/domain/SnapshotSource.ts';
 import { MEASURE } from '@/core/measure/domain/Constants.ts';
 import { Network } from '@/core/snapshot/domain/Network.ts';
@@ -21,7 +22,11 @@ import { VoteInclusionTracker } from '@/core/snapshot/domain/VoteInclusionTracke
 import { MeasureService } from '@/core/measure/application/Measure.ts';
 
 // One instance per process, shared by every route bundle (spec §4.1).
-type Shared = { source?: SnapshotSource; measure?: MeasureService };
+type Shared = {
+  source?: SnapshotSource;
+  measure?: MeasureService;
+  clients?: ClientDirectory;
+};
 const shared = globalThis as typeof globalThis & { __solanaTvc?: Shared };
 const singletons = (): Shared => (shared.__solanaTvc ??= {});
 
@@ -97,6 +102,10 @@ export class Factory {
 
   static SolanaRpc(): SolanaRpc {
     return new SolanaRpc(Factory.rpcUrls());
+  }
+
+  static ClientDirectory(): ClientDirectory {
+    return (singletons().clients ??= new ClientDirectory(Factory.SolanaRpc()));
   }
 
   static MeasureService(): MeasureService {

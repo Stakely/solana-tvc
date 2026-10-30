@@ -213,6 +213,15 @@ describe('MeasureService', () => {
     expect((await service.measure('nope')).validator).toBeNull();
   });
 
+  it('measures for 20 s after someone looks at the table', () => {
+    const { service, clock } = world();
+    expect(service.isMeasuring()).toBe(false);
+    service.watch();
+    expect(service.isMeasuring()).toBe(true);
+    clock.t += 21_000;
+    expect(service.isMeasuring()).toBe(false);
+  });
+
   it('does not start measuring for an unknown vote account', async () => {
     const { service, clock } = world();
     await service.measure('nope');

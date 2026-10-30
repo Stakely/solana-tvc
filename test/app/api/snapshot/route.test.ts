@@ -17,6 +17,7 @@ jest.mock('../../../../src/core/Factory.ts', () => {
       ValidatorSnapshotFreshener: () => freshener,
       ValidatorInfoFreshener: () => freshener,
       MeasureService: () => undefined,
+      ClientDirectory: () => undefined,
     },
   };
 });

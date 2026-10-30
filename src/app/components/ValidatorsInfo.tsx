@@ -26,6 +26,7 @@ import { HelpTooltip } from '@/app/components/HelpTooltip.tsx';
 import { StatusChip } from '@/app/components/StatusChip.tsx';
 import { HELP } from '@/app/components/measure-texts.ts';
 import { PAGE_SIZE, orderAvailable } from '@/app/providers/data.tsx';
+import { clientLabel } from '@/app/client-label.ts';
 
 export type ValidatorsInfoProps = {
   totalValidators: number;
@@ -55,20 +56,32 @@ export type ValidatorRow = {
   commission: string;
   lastVote: string;
   version: string;
+  // Short client name (Agave, Jito, Firedancer…), '' when unknown.
+  client: string;
   skipRate: string;
   status: InclusionStatus | null;
 };
 
-export type TableMode = { showInclusion: boolean; showEpochRatio: boolean };
+export type TableMode = {
+  // Votes counted and the full status have numbers to show.
+  showInclusion: boolean;
+  // Not yet: the first intervals since the table was opened are being
+  // measured, so the cells read "…" and the status Measuring.
+  inclusionPending: boolean;
+  showEpochRatio: boolean;
+};
 
-// Votes counted and the full status exist only while someone measures on
-// this replica and the measurement is trusted (spec §5.1, §6.3). The epoch
-// ratio is hidden under review and in the migration epoch (§4.8, §5.2).
+// Votes counted and the full status come while the table is open on this
+// replica and the measurement is trusted (spec §5.1, §6.3); their columns
+// stay in place meanwhile, so the table does not jump. The epoch ratio is
+// hidden under review and in the migration epoch (§4.8, §5.2).
 export function tableMode(meta: SnapshotMeta | null): TableMode {
+  const showInclusion = meta?.inclusionCoverageSeconds !== undefined;
+  const hidden = meta?.measurement === 'under_review' || !!meta?.migrationEpoch;
   return {
-    showInclusion: meta?.inclusionCoverageSeconds !== undefined,
-    showEpochRatio:
-      meta?.measurement !== 'under_review' && !meta?.migrationEpoch,
+    showInclusion,
+    inclusionPending: !showInclusion && !hidden,
+    showEpochRatio: !hidden,
   };
 }
 
@@ -88,26 +101,10 @@ export type WidthKey =
 
 type FixedWidths = Record<Exclude<WidthKey, 'identity'>, number>;
 
-// On the widest table (1158px: every table above 1440px wide) each share
-// holds its column's minimum with either root font, so no column takes room
-// from Identity there.
-const WIDE: FixedWidths = {
-  ranking: 5,
-  stake: 9,
-  epochRatio: 9,
-  votesCounted: 0,
-  missed: 0,
-  commission: 8,
-  lastVote: 9,
-  version: 7,
-  skipRate: 7,
-  status: 14,
-  measure: 12,
-};
-
-// Twelve columns while measuring: each one gets the smallest quarter percent
-// that holds its minimum, and Identity keeps 16.25%.
-const COMPACT: FixedWidths = {
+// Twelve columns: each one gets the smallest quarter percent that holds its
+// minimum on the widest table (1158px, every table above 1440px wide) with
+// either root font, and Identity keeps 15%.
+const SHARES: FixedWidths = {
   ranking: 5,
   stake: 7.75,
   epochRatio: 6,
@@ -115,7 +112,7 @@ const COMPACT: FixedWidths = {
   missed: 6.25,
   commission: 7.25,
   lastVote: 8,
-  version: 5,
+  version: 6.25,
   skipRate: 5.75,
   status: 13,
   measure: 11.25,
@@ -125,12 +122,9 @@ const COMPACT: FixedWidths = {
 // leave, so every mode adds up to 100% and the header stays aligned with the
 // rows (Table lays them out with flex and nowrap cells).
 export function columnWidths(mode: TableMode): Record<WidthKey, number> {
-  const base = mode.showInclusion ? COMPACT : WIDE;
   const shown: FixedWidths = {
-    ...base,
-    epochRatio: mode.showEpochRatio ? base.epochRatio : 0,
-    votesCounted: mode.showInclusion ? base.votesCounted : 0,
-    missed: mode.showInclusion ? base.missed : 0,
+    ...SHARES,
+    epochRatio: mode.showEpochRatio ? SHARES.epochRatio : 0,
   };
   const used = Object.values(shown).reduce((sum, width) => sum + width, 0);
   return { ...shown, identity: 100 - used };
@@ -146,6 +140,8 @@ export type ColumnMin = { rem: number; px: number };
 // line height is body1's 1.26rem at the 12px root.
 const HEADER_FONT_SIZE: Pixel = '12px';
 const HEADER_LINE_HEIGHT = 1.26;
+// The client under the version, at any root font.
+const CLIENT_FONT_SIZE: Pixel = '11px';
 
 // The narrowest each desktop column can get: text that scales with the root
 // font (12px up to 1440px wide, 16px above) in rem, and icons, paddings, the
@@ -163,8 +159,9 @@ export const COLUMN_MIN: Record<WidthKey, ColumnMin> = {
   missed: { rem: 0, px: 71 }, // "Missed" and the help icon
   commission: { rem: 0, px: 81 }, // "Commission"
   lastVote: { rem: 5.25, px: 7 }, // a 9-digit slot
-  // "Version", and "3.0.10" with the 16px root; longer ones end in "…".
-  version: { rem: 0.75, px: 43 },
+  // "Version", "26.10.4" with the 16px root, and the client below it in
+  // 11px ("Harmonic FD"); longer ones end in "…".
+  version: { rem: 0, px: 69 },
   // "Skip" over "rate" and the help icon, and "12.34%" with the 16px root.
   skipRate: { rem: 1.75, px: 35 },
   status: { rem: 6.25, px: 46 }, // the "Not measurable" chip and its help icon
@@ -200,14 +197,10 @@ export function tableMinWidth(mode: TableMode): string {
   );
 }
 
-// The order the server applies when the user picked none.
-export function defaultOrder(meta: SnapshotMeta | null): OrderCriteria {
-  return meta !== null &&
-    meta.measuring &&
-    meta.measurement === 'ok' &&
-    !meta.migrationEpoch
-    ? 'inclusion'
-    : 'stake';
+// The order the server applies when the user picked none: stake, so the
+// table does not reorder when Votes counted arrives.
+export function defaultOrder(): OrderCriteria {
+  return 'stake';
 }
 
 export function epochRatioCell(
@@ -231,8 +224,10 @@ export function validatorRow(
   if (identity === '') identity = 'Unnamed';
   const inclusion = mode.showInclusion ? v.inclusion : undefined;
   // No paying blocks counted (Not measurable, Delinquent, or none yet):
-  // Votes counted and Missed show "—", not 0 (types/measure.ts).
+  // Votes counted and Missed show "—", not 0 (types/measure.ts). While the
+  // first intervals are measured they show "…".
   const counted = inclusion && inclusion.payable > 0 ? inclusion : undefined;
+  const noCount = mode.inclusionPending ? '…' : '—';
   const skipRate = v.skipRate ?? 0;
   return {
     voteAccountPubkey: v.voteAccountPubkey,
@@ -244,13 +239,20 @@ export function validatorRow(
     epochRatio: epochRatioCell(v),
     votesCounted: counted
       ? formatPercent(counted.included / counted.payable, 2)
-      : '—',
-    missed: counted ? String(counted.missed) : '—',
+      : noCount,
+    missed: counted ? String(counted.missed) : noCount,
     commission: `${v.commission}%`,
     lastVote: String(v.lastVote),
     version: v.version,
+    client: clientLabel(v.client),
     skipRate: `${Number.isInteger(skipRate) ? skipRate : skipRate.toFixed(2)}%`,
-    status: inclusion ? inclusion.status : v.delinquent ? 'delinquent' : null,
+    status: inclusion
+      ? inclusion.status
+      : v.delinquent
+        ? 'delinquent'
+        : mode.inclusionPending
+          ? 'measuring'
+          : null,
   };
 }
 
@@ -287,6 +289,28 @@ const HeaderLabel: FC<HeaderLabelProps> = ({ text, help, inHeaderRow }) => {
     >
       {label}
       <HelpTooltip text={help} size={'16px'} />
+    </div>
+  );
+};
+
+// The version and, below it in small type, the client that runs it.
+const VersionCell: FC<{ version: string; client: string }> = ({
+  version,
+  client,
+}) => {
+  const { colors } = useTheme();
+  return (
+    <div className={'flex-col items-center'} style={{ minWidth: 0 }}>
+      <Text content={version} alt={version} />
+      {client !== '' && (
+        <Text
+          color={colors.background['01']}
+          forceSize={CLIENT_FONT_SIZE}
+          forceLineHeight={HEADER_LINE_HEIGHT}
+          content={client}
+          alt={client}
+        />
+      )}
     </div>
   );
 };
@@ -386,8 +410,8 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
     ? 'stake'
     : orderCriteria !== null && available(orderCriteria)
       ? orderCriteria
-      : defaultOrder(meta);
-  const coverage = Math.round(meta?.inclusionCoverageSeconds ?? 0);
+      : defaultOrder();
+  const coverage = meta?.inclusionCoverageSeconds;
   const minMeasurableStake = meta?.minMeasurableStake ?? null;
 
   // A name cut by its cell ends in "…" (the cell's own ellipsis does not
@@ -444,7 +468,9 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
   const votesCountedColumn: TableColumn<ValidatorRow> = {
     // No-break spaces keep "(VIR) · 287 s" on one line when the header wraps.
     label: headerLabel(
-      `Votes counted (VIR)\u00a0·\u00a0${coverage}\u00a0s`,
+      coverage === undefined
+        ? 'Votes counted (VIR)'
+        : `Votes counted (VIR)\u00a0·\u00a0${Math.round(coverage)}\u00a0s`,
       HELP.votesCounted
     ),
     prop: 'votesCounted',
@@ -499,7 +525,8 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
   };
   const measurementColumns: TableColumn<ValidatorRow>[] = [
     ...(mode.showEpochRatio ? [epochRatioColumn] : []),
-    ...(mode.showInclusion ? [votesCountedColumn, missedColumn] : []),
+    votesCountedColumn,
+    missedColumn,
   ];
 
   const desktopColumns: TableColumn<ValidatorRow>[] = [
@@ -540,6 +567,7 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
       align: 'center',
       width: pct(widths.version),
       minWidth: columnMinWidth('version'),
+      render: (row) => <VersionCell version={row.version} client={row.client} />,
     },
     {
       label: headerLabel('Skip rate', HELP.skipRate),

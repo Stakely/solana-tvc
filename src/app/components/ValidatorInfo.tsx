@@ -4,6 +4,7 @@ import { FC } from 'react';
 import { formatLamportsToSol } from '@/app/utils.ts';
 import { Snapshot, VersionData } from '@/types/snapshot.ts';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
+import { clientLabel } from '@/app/client-label.ts';
 import {
   Avatar,
   Divider,
@@ -38,6 +39,7 @@ export const ValidatorInfo: FC<ValidatorInfoProps> = ({
   const validatorName = validator?.info?.info.name ?? validatorIdentity;
   const validatorVoteAccount = validator?.voteAccountPubkey ?? vote;
   const validatorVersion = validator?.version ?? UNKNOWN;
+  const validatorClient = clientLabel(validator?.client);
   const validatorCommission = validator ? `${validator.commission}%` : UNKNOWN;
   const validatorDelinquent = validator
     ? validator.delinquent
@@ -122,7 +124,9 @@ export const ValidatorInfo: FC<ValidatorInfoProps> = ({
               />
             </div>
             <div className={'w-full flex gap-5 items-center'}>
-              <Text content={`Version: <b>${validatorVersion}</b>`} />
+              <Text
+                content={`Version: <b>${validatorVersion}</b>${validatorClient ? ` (${validatorClient})` : ''}`}
+              />
               <Tooltip
                 content={`This version is used by:
  - ${version?.currentValidatorsPercent?.toFixed(2)}% of the validators\n - ${version?.stakePercent.toFixed(2)}% of the stake\n- Has ${version?.delinquentPercent}% of delinquent`}

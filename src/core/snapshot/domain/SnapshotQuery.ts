@@ -27,7 +27,8 @@ export class SnapshotQuery {
 
   async query(
     query: SnapshotQueryArgs,
-    extras?: SnapshotExtras
+    extras?: SnapshotExtras,
+    clientOf?: (identity: string) => string | undefined
   ): Promise<GetSnapshotResponse> {
     const fullSnapshot: Snapshot = await this._snapshotParser.parse();
     const validatorsInfo = await this._validatorInfoParser.parse();
@@ -43,6 +44,7 @@ export class SnapshotQuery {
       validators: fullSnapshot.validators.map((v) => ({
         ...v,
         info: infoByIdentity.get(v.identityPubkey),
+        client: clientOf?.(v.identityPubkey),
         ...extras?.byVote(v.voteAccountPubkey),
       })),
     };

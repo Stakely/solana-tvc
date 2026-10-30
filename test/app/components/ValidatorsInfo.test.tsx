@@ -124,12 +124,40 @@ describe('validatorRow', () => {
     ).toBe('0');
   });
 
-  it('shows only Delinquent when nobody measures', () => {
+  it('reads Measuring and "…" until the first intervals are measured', () => {
     const mode = tableMode(meta());
+    expect(mode.inclusionPending).toBe(true);
     expect(validatorRow(validator({ delinquent: true }), mode, 20).status).toBe(
       'delinquent'
     );
-    expect(validatorRow(validator(), mode, 20).status).toBeNull();
+    const row = validatorRow(validator(), mode, 20);
+    expect(row.status).toBe('measuring');
+    expect(row.votesCounted).toBe('…');
+    expect(row.missed).toBe('…');
+  });
+
+  it('shows only Delinquent, and "—", under review and in the migration epoch', () => {
+    for (const metaValue of [
+      meta({ measurement: 'under_review' }),
+      meta({ migrationEpoch: true }),
+    ]) {
+      const mode = tableMode(metaValue);
+      expect(mode.inclusionPending).toBe(false);
+      const row = validatorRow(validator(), mode, 20);
+      expect(row.status).toBeNull();
+      expect(row.votesCounted).toBe('—');
+      expect(
+        validatorRow(validator({ delinquent: true }), mode, 20).status
+      ).toBe('delinquent');
+    }
+  });
+
+  it('names the client under the version', () => {
+    const mode = tableMode(meta());
+    expect(validatorRow(validator({ client: 'JitoLabs' }), mode, 20).client).toBe(
+      'Jito'
+    );
+    expect(validatorRow(validator(), mode, 20).client).toBe('');
   });
 
   it('hides the epoch ratio under review and in the migration epoch', () => {
@@ -183,7 +211,8 @@ const MEASURED: Record<WidthKey, readonly [number, number]> = {
   missed: [70, 70], // "Missed" and the help icon
   commission: [80, 80], // "Commission"
   lastVote: [69, 90], // "412345678"
-  version: [51, 54], // "Version", and "3.0.10" with the 16px root
+  // "Version", "26.10.4" with the 16px root, and "Harmonic FD" in 11px.
+  version: [68, 68],
   skipRate: [55, 62], // "Skip" over "rate" and the help icon, and "12.34%"
   status: [120, 145], // the "Not measurable" chip and its help icon
   measure: [106, 123], // the Measure button with its icon
@@ -292,12 +321,14 @@ describe('column minimums', () => {
 });
 
 describe('ValidatorsInfo', () => {
-  it('shows the epoch ratio and no credits when nobody measures', () => {
-    renderTable([validator()], meta());
+  it('keeps the Votes counted columns, measuring, before the first intervals', () => {
+    renderTable([validator({ client: 'Firedancer' })], meta());
     expect(screen.queryByText('Earned credits')).toBeNull();
     expect(screen.getByText('0.9994')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: HELP.epochRatio })).toBeInTheDocument();
-    expect(screen.queryByText(/Votes counted \(VIR\)/)).toBeNull();
+    expect(screen.getByText('Votes counted (VIR)')).toBeInTheDocument();
+    expect(screen.getAllByText('…')).toHaveLength(2);
+    expect(screen.getByText('Firedancer')).toBeInTheDocument();
   });
 
   it('adds votes counted and missed, with the seconds covered, while measuring', () => {
@@ -318,7 +349,7 @@ describe('ValidatorsInfo', () => {
     ).toBeInTheDocument();
   });
 
-  it('keeps the header in step with the rows when measuring starts and stops', () => {
+  it('keeps the header in step with the rows when a column comes and goes', () => {
     const props = {
       snapshot: snapshot([
         validator({
@@ -335,21 +366,25 @@ describe('ValidatorsInfo', () => {
       onValidatorMonitorAction: jest.fn(),
     };
     const headers = () =>
-      [...cellOf(screen.getByText('Rank')).parentElement!.parentElement!.children].map(
+      // The header row holds the columns, each with its minimum width.
+      [...cellOf(screen.getByText('Rank')).parentElement!.children].map(
         (cell) => cell.textContent
       );
-    const view = renderUi(<ValidatorsInfo {...props} meta={meta()} />);
-    const idle = headers();
-    expect(idle).toContain('Commission');
-    expect(idle.some((h) => h?.startsWith('Votes counted'))).toBe(false);
-
-    view.rerender(<ValidatorsInfo {...props} meta={measuring()} />);
+    // The epoch ratio column leaves under review and comes back.
+    const view = renderUi(<ValidatorsInfo {...props} meta={measuring()} />);
     const busy = headers();
-    expect(busy).toHaveLength(idle.length + 2);
+    expect(busy).toContain('Epoch ratio');
     expect(busy.indexOf('Missed')).toBe(busy.indexOf('Commission') - 1);
 
-    view.rerender(<ValidatorsInfo {...props} meta={meta()} />);
-    expect(headers()).toEqual(idle);
+    const review = meta({ measuring: true, measurement: 'under_review' });
+    view.rerender(<ValidatorsInfo {...props} meta={review} />);
+    const reviewed = headers();
+    expect(reviewed).toHaveLength(busy.length - 1);
+    expect(reviewed).not.toContain('Epoch ratio');
+    expect(reviewed.indexOf('Stake')).toBe(reviewed.indexOf('Votes counted (VIR)') - 1);
+
+    view.rerender(<ValidatorsInfo {...props} meta={measuring()} />);
+    expect(headers()).toEqual(busy);
   });
 
   it('hides the epoch ratio while the measurement is under review', () => {
@@ -458,7 +493,7 @@ describe('ValidatorsInfo', () => {
   it('shows the server default order and sends the one the user picks', () => {
     const actions = renderTable([validator()], measuring());
     expect(
-      screen.getByRole('button', { name: 'Votes counted', pressed: true })
+      screen.getByRole('button', { name: 'Stake', pressed: true })
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Epoch ratio' }));
     expect(actions.setOrderCriteriaAction).toHaveBeenCalledWith('epochRatio');
@@ -477,7 +512,8 @@ describe('ValidatorsInfo', () => {
     expect(
       screen.queryByRole('img', { name: HELP.epochRatioPending })
     ).toBeNull();
-    expect(screen.queryByText('—')).toBeNull();
+    // Only Votes counted and Missed, with nothing to count.
+    expect(screen.getAllByText('—')).toHaveLength(2);
   });
 
   it('disables the orders the server cannot rank', () => {

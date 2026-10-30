@@ -96,7 +96,13 @@ export class MeasureService {
     return this._deps.instance;
   }
 
-  // Someone is measuring: a measure request in the last 20 s.
+  // The table is open somewhere: measure while it is (no extra CLI call, the
+  // table request refreshes the snapshot anyway).
+  watch(): void {
+    this._lastMeasureAt = this._now();
+  }
+
+  // Someone is measuring: a measure or table request in the last 20 s.
   isMeasuring(): boolean {
     return this._now() - this._lastMeasureAt <= MEASURE.measuringWindowMs;
   }

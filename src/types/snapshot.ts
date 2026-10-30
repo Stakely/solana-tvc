@@ -21,6 +21,9 @@ export type ValidatorSnapshot = {
   skipRate: number | null;
   version: string;
   voteAccountPubkey: string;
+  // The gossip client id of the identity (getClusterNodes), when known:
+  // Agave, JitoLabs, Firedancer…
+  client?: string;
   info?: ValidatorInfo;
   ranking?: number;
   epochRatio?: number | null;

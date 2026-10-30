@@ -17,4 +17,16 @@ describe('VersionInfo', () => {
     }
     expect(versions).toHaveLength(5);
   });
+
+  it('lists the clients of each version by share of its stake', () => {
+    const version = {
+      ...versionData('4.3.2', 100),
+      clients: [
+        { client: 'JitoLabs', validators: 3, stakePercent: 60 },
+        { client: '', validators: 1, stakePercent: 40 },
+      ],
+    };
+    renderUi(<VersionInfo versions={[version]} />);
+    expect(screen.getByText('Jito 60.00% (3) · Unknown 40.00% (1)')).toBeInTheDocument();
+  });
 });

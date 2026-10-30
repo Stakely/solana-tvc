@@ -2,11 +2,21 @@ import { EpochRatioState, SnapshotMeta, ValidatorInclusion } from '@/types/measu
 
 export type Lamports = string;
 
+// The current (not delinquent) validators of a version that run one client.
+export type ClientStats = {
+  // Gossip client id; '' when the identity reports none.
+  client: string;
+  validators: number;
+  activeStake: Lamports;
+};
+
 export type StakeByVersionStats = {
   currentActiveStake: Lamports;
   currentValidators: number;
   delinquentActiveStake: Lamports;
   delinquentValidators: number;
+  // Added by the API from getClusterNodes, most stake first.
+  clients?: ClientStats[];
 };
 
 export type ValidatorSnapshot = {
@@ -83,6 +93,8 @@ export type VersionData = {
   delinquentValidators: number;
   currentValidators: number;
   currentValidatorsPercent: number;
+  // Share of the version's current stake per client, most stake first.
+  clients: Array<{ client: string; validators: number; stakePercent: number }>;
 };
 
 export function versionsToRows(
@@ -125,6 +137,13 @@ export function versionsToRows(
         currentValidatorsPercent: totalValidators
           ? (currentValidators / totalValidators) * 100
           : 0,
+        clients: (s.clients ?? []).map((c) => ({
+          client: c.client,
+          validators: c.validators,
+          stakePercent: currentActiveStake
+            ? (Number(c.activeStake) / currentActiveStake) * 100
+            : 0,
+        })),
       };
     })
     .sort((a, b) => b.currentActiveStake - a.currentActiveStake);

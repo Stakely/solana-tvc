@@ -175,6 +175,7 @@ export function versionData(
     delinquentValidators: 0,
     currentValidators: 1,
     currentValidatorsPercent: 10,
+    clients: [],
   };
 }
 

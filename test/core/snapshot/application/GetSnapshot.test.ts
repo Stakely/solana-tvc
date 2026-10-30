@@ -227,6 +227,11 @@ describe('Get Snapshot test', () => {
     expect(byIdentity.get(PUFFIN)).toBe('JitoLabs');
     expect(byIdentity.get(SEVEN)).toBeUndefined();
     expect(clients.refresh).toHaveBeenCalledTimes(1);
+    // Per version, only current validators count (7pR7 is delinquent).
+    expect(response.snapshot.stakeByVersion['4.0.0'].clients).toEqual([
+      { client: 'JitoLabs', validators: 1, activeStake: '1000' },
+    ]);
+    expect(response.snapshot.stakeByVersion['3.1.7'].clients).toEqual([]);
   });
 
   it('orders by epoch ratio on request, delinquent validators last', async () => {

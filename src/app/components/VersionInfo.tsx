@@ -6,6 +6,18 @@ import { formatLamportsToSol } from '@/app/utils.ts';
 import { useIsMobile } from '@/app/hooks';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
 import { Button, Surface, Text } from '@/app/components/ui';
+import { clientLabel } from '@/app/client-label.ts';
+
+// "Jito 52.10% (301) · Agave 40.02% (230) · …": the share of the version's
+// current stake that runs each client.
+export function clientsLine(clients: VersionData['clients']): string {
+  return clients
+    .map(
+      (c) =>
+        `${clientLabel(c.client) || 'Unknown'} ${c.stakePercent.toFixed(2)}% (${c.validators})`
+    )
+    .join(' · ');
+}
 
 type VersionInfoProps = {
   versions: Array<VersionData>;
@@ -128,6 +140,16 @@ export const VersionInfo: FC<VersionInfoProps> = ({ versions }) => {
                 </>
               )}
             </div>
+            {v.clients.length > 0 && (
+              <div className={'w-full flex-col items-center'}>
+                <Text content={'Clients (share of stake, validators)'} />
+                <Text
+                  align={'center'}
+                  content={clientsLine(v.clients)}
+                  color={colors.background['02']}
+                />
+              </div>
+            )}
           </div>
         ))}
         {!showMore && (

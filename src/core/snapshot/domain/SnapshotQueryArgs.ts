@@ -7,6 +7,10 @@ const CRITERIA: readonly OrderCriteria[] = [
   'epochRatio',
   'commission',
   'version',
+  'missed',
+  'lastVote',
+  'skipRate',
+  'name',
 ];
 
 export type SnapshotQueryOrder = {

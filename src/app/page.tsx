@@ -29,6 +29,7 @@ function Home() {
     setCurrentPage,
     setPubKeyFilter,
     orderCriteria,
+    orderDirection,
     setOrderCriteria,
   } = useData();
 
@@ -74,6 +75,7 @@ function Home() {
             pubKeyFilter={pubKeyFilter}
             currentPage={currentPage}
             orderCriteria={orderCriteria}
+            orderDirection={orderDirection}
             setCurrentPageAction={setCurrentPage}
             setPubKeyFilterAction={setPubKeyFilter}
             setOrderCriteriaAction={setOrderCriteria}

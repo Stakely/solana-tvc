@@ -3,7 +3,8 @@
 import { FC, useEffect, useMemo, useRef, useState } from 'react';
 import { Epoch } from '@/types/epoch.ts';
 import { ProgressBar } from '@/app/components/ProgressBar.tsx';
-import { useAnimatedBigInt, useAnimatedNumber, useIsMobile } from '@/app/hooks';
+import { useIsMobile } from '@/app/hooks';
+import { useLiveCounter } from '@/app/hooks/live-counter.tsx';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
 import { Surface, Text } from '@/app/components/ui';
 import { MEASURE } from '@/core/measure/domain/Constants.ts';
@@ -80,15 +81,12 @@ export const EpochInfo: FC<EpochInfoProps> = ({ epoch }) => {
   const remainingMs = deadlineMs == null ? 0 : Math.max(0, deadlineMs - nowMs);
   const remainingHms = useMemo(() => msToHms(remainingMs), [remainingMs]);
 
-  // A new reading comes every poll: rolling over the whole interval keeps the
-  // counters moving instead of jumping once every few seconds.
-  const animatedSlotIndex = useAnimatedNumber(
-    epoch?.slotIndex ?? 0,
-    MEASURE.measurePollMs
-  );
-  const animatedTransactionCount = useAnimatedBigInt(
-    epoch?.transactionCount ?? '0',
-    MEASURE.measurePollMs
+  // The server reads the epoch every 5 s or so and the page polls every 5 s,
+  // so a new value comes every 5 to 10 s: the counters move at the measured
+  // rate in between instead of jumping.
+  const animatedSlotIndex = useLiveCounter(epoch?.slotIndex ?? 0);
+  const animatedTransactionCount = String(
+    useLiveCounter(Number(epoch?.transactionCount ?? 0))
   );
   return (
     <Surface

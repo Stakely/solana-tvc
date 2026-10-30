@@ -59,6 +59,9 @@ describe('snapshotUrl', () => {
     expect(snapshotUrl(2, 10, 'a&b c', 'epochRatio')).toBe(
       '/api/snapshot?page=2&size=10&identity=a%26b%20c&orderCriteria=epochRatio'
     );
+    expect(snapshotUrl(1, 10, '', 'commission', 'asc')).toBe(
+      '/api/snapshot?page=1&size=10&identity=&orderCriteria=commission&orderDirection=asc'
+    );
     expect(snapshotUrl(1, 10, '', null)).toBe(
       '/api/snapshot?page=1&size=10&identity='
     );
@@ -194,7 +197,7 @@ describe('DataProvider', () => {
     fireEvent.click(screen.getByText('order'));
     await waitFor(() =>
       expect(snapshotCalls(fetchMock)).toContain(
-        '/api/snapshot?page=1&size=10&identity=&orderCriteria=epochRatio'
+        '/api/snapshot?page=1&size=10&identity=&orderCriteria=epochRatio&orderDirection=desc'
       )
     );
     await waitFor(() =>
@@ -216,7 +219,7 @@ describe('DataProvider', () => {
     fireEvent.click(screen.getByText('order by inclusion'));
     await waitFor(() =>
       expect(snapshotCalls(fetchMock)).toContain(
-        '/api/snapshot?page=1&size=10&identity=&orderCriteria=inclusion'
+        '/api/snapshot?page=1&size=10&identity=&orderCriteria=inclusion&orderDirection=desc'
       )
     );
     await waitFor(() =>

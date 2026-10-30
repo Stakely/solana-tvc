@@ -13,6 +13,9 @@ const byStake = (a: ValidatorSnapshot, b: ValidatorSnapshot): number => {
   return diff > 0n ? 1 : diff < 0n ? -1 : 0;
 };
 
+const nameOf = (v: ValidatorSnapshot): string =>
+  (v.info?.info.name ?? v.identityPubkey).toLowerCase();
+
 const inclusionRate = (v: ValidatorSnapshot): number =>
   v.inclusion && v.inclusion.payable > 0
     ? v.inclusion.included / v.inclusion.payable
@@ -26,6 +29,7 @@ const inclusionRate = (v: ValidatorSnapshot): number =>
 function isRanked(criteria: OrderCriteria, v: ValidatorSnapshot): boolean {
   switch (criteria) {
     case 'inclusion':
+    case 'missed':
       return !!v.inclusion && RANKED_STATUSES.has(v.inclusion.status);
     case 'epochRatio':
       return !v.delinquent && typeof v.epochRatio === 'number';
@@ -54,11 +58,22 @@ function compare(
       );
     case 'epochRatio':
       return (a.epochRatio ?? 0) - (b.epochRatio ?? 0) || byStake(a, b);
+    case 'missed':
+      return (
+        (a.inclusion?.missed ?? 0) - (b.inclusion?.missed ?? 0) ||
+        byStake(b, a)
+      );
     case 'commission':
       return a.commission - b.commission;
+    case 'lastVote':
+      return a.lastVote - b.lastVote;
+    case 'skipRate':
+      return (a.skipRate ?? 0) - (b.skipRate ?? 0) || byStake(b, a);
+    case 'name':
+      return nameOf(a).localeCompare(nameOf(b));
     case 'version':
     default:
-      return a.version.localeCompare(b.version);
+      return a.version.localeCompare(b.version, undefined, { numeric: true });
   }
 }
 

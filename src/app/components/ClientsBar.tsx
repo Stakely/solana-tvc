@@ -2,7 +2,7 @@
 
 import { FC } from 'react';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
-import { Text, Tooltip } from '@/app/components/ui';
+import { Text } from '@/app/components/ui';
 import { VersionData } from '@/types/snapshot.ts';
 import { clientLabel } from '@/app/client-label.ts';
 
@@ -66,26 +66,24 @@ export const ClientsBar: FC<{ clients: Client[] }> = ({ clients }) => {
         aria-label={segments.map(describe).join('; ')}
         style={{ display: 'flex', gap: 2, width: '100%', height: 12 }}
       >
+        {/* The browser's own tooltip (title): a Tooltip component wraps its
+            child in a box with no width, which hid the bar. */}
         {segments.map((s, i) => (
-          <Tooltip
+          <div
             key={s.client}
-            content={describe(s)}
-            backgroundColor={colors.background['04']}
-          >
-            <div
-              style={{
-                flexGrow: s.stakePercent,
-                flexBasis: 0,
-                minWidth: 2,
-                height: '100%',
-                background: s.color,
-                borderTopLeftRadius: i === 0 ? 4 : 0,
-                borderBottomLeftRadius: i === 0 ? 4 : 0,
-                borderTopRightRadius: i === segments.length - 1 ? 4 : 0,
-                borderBottomRightRadius: i === segments.length - 1 ? 4 : 0,
-              }}
-            />
-          </Tooltip>
+            title={describe(s)}
+            style={{
+              flexGrow: s.stakePercent,
+              flexBasis: 0,
+              minWidth: 2,
+              height: '100%',
+              background: s.color,
+              borderTopLeftRadius: i === 0 ? 4 : 0,
+              borderBottomLeftRadius: i === 0 ? 4 : 0,
+              borderTopRightRadius: i === segments.length - 1 ? 4 : 0,
+              borderBottomRightRadius: i === segments.length - 1 ? 4 : 0,
+            }}
+          />
         ))}
       </div>
       <div className={'w-full flex flex-wrap items-center gap-15'}>

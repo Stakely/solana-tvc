@@ -4,8 +4,10 @@ import { FC } from 'react';
 import { ToggleButton, ToggleButtonGroup } from '@mui/material';
 import {
   OrderCriteria,
+  OrderDirection,
   Snapshot,
   ValidatorSnapshot,
+  defaultDirection,
 } from '@/types/snapshot.ts';
 import { InclusionStatus, SnapshotMeta } from '@/types/measure.ts';
 import { formatLamportsToSol, formatPercent, formatRatio } from '@/app/utils.ts';
@@ -36,9 +38,13 @@ export type ValidatorsInfoProps = {
   meta: SnapshotMeta | null;
   // Picked by the user; null shows the server default.
   orderCriteria: OrderCriteria | null;
+  orderDirection?: OrderDirection;
   setCurrentPageAction: (page: number) => void;
   setPubKeyFilterAction: (key: string) => void;
-  setOrderCriteriaAction: (criteria: OrderCriteria) => void;
+  setOrderCriteriaAction: (
+    criteria: OrderCriteria,
+    direction?: OrderDirection
+  ) => void;
   // Receives the vote account: the monitor follows it (spec §6.2).
   onValidatorMonitorAction: (vote: string) => void;
 };
@@ -262,24 +268,79 @@ const ORDER_OPTIONS: Array<{ value: OrderCriteria; label: string }> = [
   { value: 'epochRatio', label: 'Epoch ratio' },
 ];
 
+// A sortable header: clicking it orders the table by its column, and
+// clicking it again flips the direction.
+export type HeaderSort = {
+  active: boolean;
+  direction: OrderDirection;
+  onClick: () => void;
+};
+
 type HeaderLabelProps = {
   text: string;
   help?: string;
   // Desktop header row: the text keeps 12px, and a label that wraps fills its
   // whole cell, so it keeps 4px from each neighbour and centres its lines.
   inHeaderRow: boolean;
+  sort?: HeaderSort;
 };
 
-const HeaderLabel: FC<HeaderLabelProps> = ({ text, help, inHeaderRow }) => {
+const PLAIN_BUTTON = {
+  background: 'none',
+  border: 0,
+  padding: 0,
+  margin: 0,
+  color: 'inherit',
+  font: 'inherit',
+  cursor: 'pointer',
+  position: 'relative',
+} as const;
+
+const HeaderLabel: FC<HeaderLabelProps> = ({
+  text,
+  help,
+  inHeaderRow,
+  sort,
+}) => {
   const { colors } = useTheme();
-  const label = (
+  const textLabel = (
     <Text
-      color={colors.background['01']}
+      color={sort?.active ? colors.primary['03'] : colors.background['01']}
       align={inHeaderRow ? 'center' : 'left'}
       forceSize={inHeaderRow ? HEADER_FONT_SIZE : undefined}
       forceLineHeight={inHeaderRow ? HEADER_LINE_HEIGHT : undefined}
       content={text}
     />
+  );
+  // The arrow hangs below the text, so the header keeps its width.
+  const label = sort ? (
+    <button
+      type={'button'}
+      onClick={sort.onClick}
+      aria-label={`Order by ${text}`}
+      aria-pressed={sort.active}
+      style={PLAIN_BUTTON}
+    >
+      {textLabel}
+      {sort.active && (
+        <span
+          aria-hidden={'true'}
+          style={{
+            position: 'absolute',
+            left: '50%',
+            bottom: -11,
+            transform: 'translateX(-50%)',
+            fontSize: 9,
+            lineHeight: 1,
+            color: colors.primary['03'],
+          }}
+        >
+          {sort.direction === 'asc' ? '▲' : '▼'}
+        </span>
+      )}
+    </button>
+  ) : (
+    textLabel
   );
   if (help === undefined) return label;
   return (
@@ -397,6 +458,7 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
   currentPage,
   pubKeyFilter,
   orderCriteria,
+  orderDirection,
   setCurrentPageAction,
   setPubKeyFilterAction,
   setOrderCriteriaAction,
@@ -416,6 +478,29 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
     : orderCriteria !== null && available(orderCriteria)
       ? orderCriteria
       : defaultOrder();
+  const direction: OrderDirection =
+    order === orderCriteria && orderDirection
+      ? orderDirection
+      : defaultDirection(order);
+  const pickOrder = (criteria: OrderCriteria) =>
+    setOrderCriteriaAction(criteria, defaultDirection(criteria));
+  // A header of the column the table is ordered by flips the direction.
+  const sortBy = (criteria: OrderCriteria): HeaderSort | undefined =>
+    isMobile || migrationEpoch || !available(criteria)
+      ? undefined
+      : {
+          active: order === criteria,
+          direction,
+          onClick: () =>
+            setOrderCriteriaAction(
+              criteria,
+              order === criteria
+                ? direction === 'asc'
+                  ? 'desc'
+                  : 'asc'
+                : defaultDirection(criteria)
+            ),
+        };
   const coverage = meta?.inclusionCoverageSeconds;
   const minMeasurableStake = meta?.minMeasurableStake ?? null;
 
@@ -446,15 +531,25 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
     return IdentityCell;
   };
 
-  const headerLabel = (text: string, help?: string) => {
+  const headerLabel = (
+    text: string,
+    help?: string,
+    sortKey?: OrderCriteria
+  ) => {
+    const sort = sortKey ? sortBy(sortKey) : undefined;
     const HeaderCell = () => (
-      <HeaderLabel text={text} help={help} inHeaderRow={!isMobile} />
+      <HeaderLabel
+        text={text}
+        help={help}
+        inHeaderRow={!isMobile}
+        sort={sort}
+      />
     );
     return HeaderCell;
   };
 
   const epochRatioColumn: TableColumn<ValidatorRow> = {
-    label: headerLabel('Epoch ratio', HELP.epochRatio),
+    label: headerLabel('Epoch ratio', HELP.epochRatio, 'epochRatio'),
     prop: 'epochRatio',
     align: 'center',
     width: pct(widths.epochRatio),
@@ -476,7 +571,8 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
       coverage === undefined
         ? 'Votes counted (VIR)'
         : `Votes counted (VIR)\u00a0·\u00a0${Math.round(coverage)}\u00a0s`,
-      HELP.votesCounted
+      HELP.votesCounted,
+      'inclusion'
     ),
     prop: 'votesCounted',
     align: 'center',
@@ -485,7 +581,7 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
     sortable: false,
   };
   const missedColumn: TableColumn<ValidatorRow> = {
-    label: headerLabel('Missed', HELP.missed),
+    label: headerLabel('Missed', HELP.missed, 'missed'),
     prop: 'missed',
     align: 'center',
     width: pct(widths.missed),
@@ -493,7 +589,7 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
     sortable: false,
   };
   const lastVoteColumn: TableColumn<ValidatorRow> = {
-    label: headerLabel('Last vote', HELP.lastVote),
+    label: headerLabel('Last vote', HELP.lastVote, 'lastVote'),
     prop: 'lastVote',
     align: 'center',
     width: pct(widths.lastVote),
@@ -543,7 +639,7 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
       minWidth: columnMinWidth('ranking'),
     },
     {
-      label: headerLabel('Identity'),
+      label: headerLabel('Identity', undefined, 'name'),
       prop: 'identity',
       align: 'start',
       width: pct(widths.identity),
@@ -551,7 +647,7 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
       render: identityCell('32px', false),
     },
     {
-      label: headerLabel('Stake'),
+      label: headerLabel('Stake', undefined, 'stake'),
       prop: 'stake',
       align: 'center',
       width: pct(widths.stake),
@@ -559,7 +655,7 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
     },
     ...measurementColumns,
     {
-      label: headerLabel('Commission'),
+      label: headerLabel('Commission', undefined, 'commission'),
       prop: 'commission',
       align: 'center',
       width: pct(widths.commission),
@@ -567,7 +663,7 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
     },
     lastVoteColumn,
     {
-      label: headerLabel('Version'),
+      label: headerLabel('Version', undefined, 'version'),
       prop: 'version',
       align: 'center',
       width: pct(widths.version),
@@ -575,7 +671,7 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
       render: (row) => <VersionCell version={row.version} client={row.client} />,
     },
     {
-      label: headerLabel('Skip rate', HELP.skipRate),
+      label: headerLabel('Skip rate', HELP.skipRate, 'skipRate'),
       prop: 'skipRate',
       align: 'center',
       width: pct(widths.skipRate),
@@ -633,7 +729,7 @@ export const ValidatorsInfo: FC<ValidatorsInfoProps> = ({
             disabled={migrationEpoch}
             available={available}
             isMobile={isMobile}
-            onChange={setOrderCriteriaAction}
+            onChange={pickOrder}
           />
         </div>
         {/* Below its narrowest width the desktop table scrolls sideways

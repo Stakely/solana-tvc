@@ -368,7 +368,8 @@ describe('ValidatorsInfo', () => {
     const headers = () =>
       // The header row holds the columns, each with its minimum width.
       [...cellOf(screen.getByText('Rank')).parentElement!.children].map(
-        (cell) => cell.textContent
+        // Without the arrow of the column the table is ordered by.
+        (cell) => cell.textContent?.replace(/[▲▼]/g, '')
       );
     // The epoch ratio column leaves under review and comes back.
     const view = renderUi(<ValidatorsInfo {...props} meta={measuring()} />);
@@ -443,7 +444,7 @@ describe('ValidatorsInfo', () => {
     renderTable([validator()], measuring());
     const missed = screen.getByText('Missed');
     expect(missed).toHaveStyle({ textAlign: 'center' });
-    expect(missed.parentElement).toHaveStyle({
+    expect(missed.closest('div')).toHaveStyle({
       paddingLeft: '4px',
       paddingRight: '4px',
     });
@@ -496,7 +497,42 @@ describe('ValidatorsInfo', () => {
       screen.getByRole('button', { name: 'Stake', pressed: true })
     ).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Epoch ratio' }));
-    expect(actions.setOrderCriteriaAction).toHaveBeenCalledWith('epochRatio');
+    expect(actions.setOrderCriteriaAction).toHaveBeenCalledWith(
+      'epochRatio',
+      'desc'
+    );
+  });
+
+  it('orders by a column when its header is clicked, and flips on a second click', () => {
+    const actions = renderTable([validator()], measuring());
+    fireEvent.click(screen.getByRole('button', { name: 'Order by Commission' }));
+    expect(actions.setOrderCriteriaAction).toHaveBeenLastCalledWith(
+      'commission',
+      'asc'
+    );
+    cleanup();
+    const again = renderTable([validator()], measuring(), {
+      orderCriteria: 'commission',
+      orderDirection: 'asc',
+    });
+    const header = screen.getByRole('button', { name: 'Order by Commission' });
+    expect(header).toHaveAttribute('aria-pressed', 'true');
+    fireEvent.click(header);
+    expect(again.setOrderCriteriaAction).toHaveBeenLastCalledWith(
+      'commission',
+      'desc'
+    );
+  });
+
+  it('does not offer the measured columns as orders when the server cannot rank them', () => {
+    renderTable([validator()], meta());
+    expect(
+      screen.queryByRole('button', { name: /Order by Votes counted/ })
+    ).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Order by Missed' })).toBeNull();
+    expect(
+      screen.getByRole('button', { name: 'Order by Stake' })
+    ).toBeInTheDocument();
   });
 
   it('fixes the order on stake and hides the epoch ratio in the migration epoch', () => {

@@ -160,3 +160,44 @@ describe('OrderReducer', () => {
     ]);
   });
 });
+
+describe('OrderReducer by the other table columns', () => {
+  it('orders by fewest missed votes, unranked statuses last', () => {
+    expect(
+      order(
+        'missed',
+        [
+          validator('a', { inclusion: inclusion('ok', 97, 100) }),
+          validator('b', { inclusion: inclusion('ok', 100, 100) }),
+          validator('c', { inclusion: inclusion('measuring', 1, 1) }),
+        ],
+        'asc'
+      )
+    ).toEqual([
+      ['b', 1],
+      ['a', 2],
+      ['c', undefined],
+    ]);
+  });
+
+  it('orders by last vote, skip rate and name', () => {
+    const vs = [
+      validator('a', { lastVote: 10, skipRate: 3, info: { identityPubkey: 'id-a', info: { name: 'zeta' } } as ValidatorSnapshot['info'] }),
+      validator('b', { lastVote: 30, skipRate: 1, info: { identityPubkey: 'id-b', info: { name: 'Alpha' } } as ValidatorSnapshot['info'] }),
+      validator('c', { lastVote: 20, skipRate: 2 }),
+    ];
+    expect(order('lastVote', vs).map(([v]) => v)).toEqual(['b', 'c', 'a']);
+    expect(order('skipRate', vs, 'asc').map(([v]) => v)).toEqual(['b', 'c', 'a']);
+    // Without a name the identity counts ("id-c").
+    expect(order('name', vs, 'asc').map(([v]) => v)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('orders versions by number, not by text', () => {
+    const vs = [
+      validator('a', { version: '4.3.2' }),
+      validator('b', { version: '26.10.4' }),
+      validator('c', { version: '4.10.0' }),
+    ];
+    expect(order('version', vs).map(([v]) => v)).toEqual(['b', 'c', 'a']);
+  });
+});

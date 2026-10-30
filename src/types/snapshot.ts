@@ -56,7 +56,27 @@ export type OrderCriteria =
   | 'inclusion'
   | 'epochRatio'
   | 'commission'
-  | 'version';
+  | 'version'
+  | 'missed'
+  | 'lastVote'
+  | 'skipRate'
+  | 'name';
+
+export type OrderDirection = 'asc' | 'desc';
+
+// The first click on a column header: the better values first (low fees,
+// few misses, low skip rate, names A to Z), the higher ones for the rest.
+export function defaultDirection(criteria: OrderCriteria): OrderDirection {
+  switch (criteria) {
+    case 'commission':
+    case 'missed':
+    case 'skipRate':
+    case 'name':
+      return 'asc';
+    default:
+      return 'desc';
+  }
+}
 
 export type GetSnapshotArgs = {
   orderDirection?: 'asc' | 'desc';

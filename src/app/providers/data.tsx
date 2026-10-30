@@ -12,7 +12,9 @@ import { Epoch } from '@/types/epoch.ts';
 import {
   GetSnapshotResponse,
   OrderCriteria,
+  OrderDirection,
   Snapshot,
+  defaultDirection,
 } from '@/types/snapshot.ts';
 import { SnapshotMeta } from '@/types/measure.ts';
 import { MEASURE } from '@/core/measure/domain/Constants.ts';
@@ -35,7 +37,12 @@ export type DataContextType = {
   setPubKeyFilter: (filter: string) => void;
   // The order the user picked; null leaves the server default.
   orderCriteria: OrderCriteria | null;
-  setOrderCriteria: (criteria: OrderCriteria | null) => void;
+  // The direction of the picked order (a header clicked twice flips it).
+  orderDirection: OrderDirection;
+  setOrderCriteria: (
+    criteria: OrderCriteria | null,
+    direction?: OrderDirection
+  ) => void;
 };
 
 const DataContext = createContext<DataContextType | null>(null);
@@ -46,7 +53,8 @@ export function snapshotUrl(
   page: number,
   size: number,
   filter: string,
-  orderCriteria: OrderCriteria | null
+  orderCriteria: OrderCriteria | null,
+  orderDirection?: OrderDirection
 ): string {
   const params: Array<[string, string]> = [
     ['page', String(page)],
@@ -55,6 +63,9 @@ export function snapshotUrl(
   ];
   if (orderCriteria) {
     params.push(['orderCriteria', orderCriteria]);
+    if (orderDirection) {
+      params.push(['orderDirection', orderDirection]);
+    }
   }
   const query = params
     .map(([key, value]) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
@@ -71,6 +82,7 @@ export function orderAvailable(
   if (meta === null || meta.migrationEpoch) return criteria === 'stake';
   switch (criteria) {
     case 'inclusion':
+    case 'missed':
       // Sent only while someone measures and the measurement is trusted.
       return meta.inclusionCoverageSeconds !== undefined;
     case 'epochRatio':
@@ -105,6 +117,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [pubKeyFilter, setPubKeyFilterState] = useState<string>('');
   const [orderCriteria, setOrderCriteriaState] =
     useState<OrderCriteria | null>(null);
+  const [orderDirection, setOrderDirection] = useState<OrderDirection>('desc');
   const latestRequest = useRef(0);
 
   const setPubKeyFilter = (filter: string) => {
@@ -112,8 +125,14 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setCurrentPage(1);
   };
 
-  const setOrderCriteria = (criteria: OrderCriteria | null) => {
+  const setOrderCriteria = (
+    criteria: OrderCriteria | null,
+    direction?: OrderDirection
+  ) => {
     setOrderCriteriaState(criteria);
+    setOrderDirection(
+      direction ?? (criteria ? defaultDirection(criteria) : 'desc')
+    );
     setCurrentPage(1);
   };
 
@@ -127,7 +146,13 @@ export function DataProvider({ children }: { children: ReactNode }) {
       const [nextEpoch, result] = await Promise.all([
         getJson<Epoch>('/api/epoch'),
         getJson<GetSnapshotResponse>(
-          snapshotUrl(currentPage, PAGE_SIZE, pubKeyFilter, orderCriteria)
+          snapshotUrl(
+            currentPage,
+            PAGE_SIZE,
+            pubKeyFilter,
+            orderCriteria,
+            orderDirection
+          )
         ),
       ]);
       // A newer request (other page, filter or order) owns the state now.
@@ -152,7 +177,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       cancelled = true;
       if (timer) clearTimeout(timer);
     };
-  }, [visible, currentPage, pubKeyFilter, orderCriteria]);
+  }, [visible, currentPage, pubKeyFilter, orderCriteria, orderDirection]);
 
   return (
     <DataContext.Provider
@@ -167,6 +192,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
         pubKeyFilter,
         setPubKeyFilter,
         orderCriteria,
+        orderDirection,
         setOrderCriteria,
       }}
     >

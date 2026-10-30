@@ -1,10 +1,22 @@
+import { EpochRatioState, SnapshotMeta, ValidatorInclusion } from '@/types/measure.ts';
+
 export type Lamports = string;
+
+// The current (not delinquent) validators of a version that run one client.
+export type ClientStats = {
+  // Gossip client id; '' when the identity reports none.
+  client: string;
+  validators: number;
+  activeStake: Lamports;
+};
 
 export type StakeByVersionStats = {
   currentActiveStake: Lamports;
   currentValidators: number;
   delinquentActiveStake: Lamports;
   delinquentValidators: number;
+  // Added by the API from getClusterNodes, most stake first.
+  clients?: ClientStats[];
 };
 
 export type ValidatorSnapshot = {
@@ -19,8 +31,14 @@ export type ValidatorSnapshot = {
   skipRate: number | null;
   version: string;
   voteAccountPubkey: string;
+  // The gossip client id of the identity (getClusterNodes), when known:
+  // Agave, JitoLabs, Firedancer…
+  client?: string;
   info?: ValidatorInfo;
   ranking?: number;
+  epochRatio?: number | null;
+  epochRatioState?: EpochRatioState;
+  inclusion?: ValidatorInclusion;
 };
 
 export type Snapshot = {
@@ -33,9 +51,36 @@ export type Snapshot = {
   validators: ValidatorSnapshot[];
 };
 
+export type OrderCriteria =
+  | 'stake'
+  | 'inclusion'
+  | 'epochRatio'
+  | 'commission'
+  | 'version'
+  | 'missed'
+  | 'lastVote'
+  | 'skipRate'
+  | 'name';
+
+export type OrderDirection = 'asc' | 'desc';
+
+// The first click on a column header: the better values first (low fees,
+// few misses, low skip rate, names A to Z), the higher ones for the rest.
+export function defaultDirection(criteria: OrderCriteria): OrderDirection {
+  switch (criteria) {
+    case 'commission':
+    case 'missed':
+    case 'skipRate':
+    case 'name':
+      return 'asc';
+    default:
+      return 'desc';
+  }
+}
+
 export type GetSnapshotArgs = {
   orderDirection?: 'asc' | 'desc';
-  orderCriteria?: 'credits' | 'commission' | 'version';
+  orderCriteria?: OrderCriteria;
   size?: number;
   page?: number;
   publicKey?: string;
@@ -45,7 +90,7 @@ export type GetSnapshotResponse = {
   snapshot: Snapshot;
   totalItems: number;
   itemsPerPage: number;
-};
+} & SnapshotMeta;
 
 export type ValidatorInfo = {
   identityPubkey: string;
@@ -68,6 +113,8 @@ export type VersionData = {
   delinquentValidators: number;
   currentValidators: number;
   currentValidatorsPercent: number;
+  // Share of the version's current stake per client, most stake first.
+  clients: Array<{ client: string; validators: number; stakePercent: number }>;
 };
 
 export function versionsToRows(
@@ -110,6 +157,13 @@ export function versionsToRows(
         currentValidatorsPercent: totalValidators
           ? (currentValidators / totalValidators) * 100
           : 0,
+        clients: (s.clients ?? []).map((c) => ({
+          client: c.client,
+          validators: c.validators,
+          stakePercent: currentActiveStake
+            ? (Number(c.activeStake) / currentActiveStake) * 100
+            : 0,
+        })),
       };
     })
     .sort((a, b) => b.currentActiveStake - a.currentActiveStake);

@@ -6,6 +6,7 @@ import { formatLamportsToSol } from '@/app/utils.ts';
 import { useIsMobile } from '@/app/hooks';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
 import { Button, Surface, Text } from '@/app/components/ui';
+import { ClientsBar } from '@/app/components/ClientsBar.tsx';
 
 type VersionInfoProps = {
   versions: Array<VersionData>;
@@ -16,7 +17,7 @@ export const VersionInfo: FC<VersionInfoProps> = ({ versions }) => {
   const isMobile = useIsMobile();
   const [showMore, setShowMore] = useState<boolean>(false);
 
-  const mainVersions = versions.splice(0, 3);
+  const mainVersions = versions.slice(0, 3);
   const versionsToShow = showMore ? versions : mainVersions;
 
   return (
@@ -128,6 +129,7 @@ export const VersionInfo: FC<VersionInfoProps> = ({ versions }) => {
                 </>
               )}
             </div>
+            {v.clients.length > 0 && <ClientsBar clients={v.clients} />}
           </div>
         ))}
         {!showMore && (

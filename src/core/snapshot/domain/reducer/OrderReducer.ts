@@ -1,31 +1,100 @@
 import { SnapshotQueryArgs } from '@/core/snapshot/domain/SnapshotQueryArgs.ts';
-import { Snapshot, ValidatorSnapshot } from '@/types/snapshot.ts';
+import {
+  OrderCriteria,
+  Snapshot,
+  ValidatorSnapshot,
+} from '@/types/snapshot.ts';
 import { Reducer } from '@/core/snapshot/domain/reducer/Reducer.ts';
+
+const RANKED_STATUSES = new Set(['ok', 'missing']);
+
+const byStake = (a: ValidatorSnapshot, b: ValidatorSnapshot): number => {
+  const diff = BigInt(a.activatedStake) - BigInt(b.activatedStake);
+  return diff > 0n ? 1 : diff < 0n ? -1 : 0;
+};
+
+const nameOf = (v: ValidatorSnapshot): string =>
+  (v.info?.info.name ?? v.identityPubkey).toLowerCase();
+
+const inclusionRate = (v: ValidatorSnapshot): number =>
+  v.inclusion && v.inclusion.payable > 0
+    ? v.inclusion.included / v.inclusion.payable
+    : 0;
+
+// Validators that take a rank under each order (spec §5.1). The others are
+// listed after them by stake, without a rank. No order ranks a delinquent
+// validator: votes counted goes by the status the table shows (§4.8, which
+// checks delinquency first), the other orders by the CLI flag. A validator
+// that goes delinquent keeps the epoch ratio of the unit it had confirmed.
+function isRanked(criteria: OrderCriteria, v: ValidatorSnapshot): boolean {
+  switch (criteria) {
+    case 'inclusion':
+    case 'missed':
+      return !!v.inclusion && RANKED_STATUSES.has(v.inclusion.status);
+    case 'epochRatio':
+      return !v.delinquent && typeof v.epochRatio === 'number';
+    case 'stake':
+    case 'commission':
+    case 'version':
+    default:
+      return !v.delinquent;
+  }
+}
+
+// Positive when a goes first in descending order.
+function compare(
+  criteria: OrderCriteria,
+  a: ValidatorSnapshot,
+  b: ValidatorSnapshot
+): number {
+  switch (criteria) {
+    case 'stake':
+      return byStake(a, b);
+    case 'inclusion':
+      return (
+        inclusionRate(a) - inclusionRate(b) ||
+        (b.inclusion?.missed ?? 0) - (a.inclusion?.missed ?? 0) ||
+        byStake(a, b)
+      );
+    case 'epochRatio':
+      return (a.epochRatio ?? 0) - (b.epochRatio ?? 0) || byStake(a, b);
+    case 'missed':
+      return (
+        (a.inclusion?.missed ?? 0) - (b.inclusion?.missed ?? 0) ||
+        byStake(b, a)
+      );
+    case 'commission':
+      return a.commission - b.commission;
+    case 'lastVote':
+      return a.lastVote - b.lastVote;
+    case 'skipRate':
+      return (a.skipRate ?? 0) - (b.skipRate ?? 0) || byStake(b, a);
+    case 'name':
+      return nameOf(a).localeCompare(nameOf(b));
+    case 'version':
+    default:
+      return a.version.localeCompare(b.version, undefined, { numeric: true });
+  }
+}
 
 export class OrderReducer implements Reducer {
   apply(query: SnapshotQueryArgs, snapshot: Snapshot): Snapshot {
     const { criteria, direction } = query.order;
-
     const dir = direction === 'asc' ? 1 : -1;
 
-    const sorted = [...snapshot.validators].sort((a, b) => {
-      switch (criteria) {
-        case 'credits':
-          return (a.epochCredits - b.epochCredits) * dir;
+    const ranked = snapshot.validators
+      .filter((v) => isRanked(criteria, v))
+      .sort((a, b) => compare(criteria, a, b) * dir);
+    const unranked = snapshot.validators
+      .filter((v) => !isRanked(criteria, v))
+      .sort((a, b) => byStake(b, a));
 
-        case 'commission':
-          return (a.commission - b.commission) * dir;
-
-        case 'version':
-        default:
-          return a.version.localeCompare(b.version) * dir;
-      }
-    });
-
-    const indexedSorted = sorted.map((v, i): ValidatorSnapshot => {
-      return { ...v, ranking: i + 1 };
-    });
-
-    return { ...snapshot, validators: indexedSorted };
+    return {
+      ...snapshot,
+      validators: [
+        ...ranked.map((v, i): ValidatorSnapshot => ({ ...v, ranking: i + 1 })),
+        ...unranked,
+      ],
+    };
   }
 }

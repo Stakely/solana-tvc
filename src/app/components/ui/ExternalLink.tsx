@@ -3,7 +3,8 @@
 import React, { FC, ReactNode, useState } from 'react';
 import { Pixel } from '@/app/components/utils/Measures.ts';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
-import { Icon, Text } from '@/app/components';
+import { Icon } from '@/app/components/ui/Icon.tsx';
+import { Text } from '@/app/components/ui/Text.tsx';
 
 type ExternalLinkProps = {
   /**

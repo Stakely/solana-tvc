@@ -4,7 +4,11 @@ import React, { ReactNode, useEffect, useState } from 'react';
 import { Percentage, Pixel } from '@/app/components/utils/Measures.ts';
 import { useIsMobile } from '@/app/hooks';
 import { useTheme } from '@/app/components/theme/theme-provider.tsx';
-import { Accordion, Divider, Icon, Surface, Text } from '@/app/components';
+import { Accordion } from '@/app/components/ui/Accordion.tsx';
+import { Divider } from '@/app/components/ui/Divider.tsx';
+import { Icon } from '@/app/components/ui/Icon.tsx';
+import { Surface } from '@/app/components/ui/Surface.tsx';
+import { Text } from '@/app/components/ui/Text.tsx';
 
 export type TableColumn<T> = {
   /**
@@ -36,6 +40,14 @@ export type TableColumn<T> = {
    * If not specified, widths are evenly distributed.
    */
   width?: Percentage;
+
+  /**
+   * Optional minimum width of the column, as any CSS length (e.g. '80px' or
+   * 'calc(6rem + 8px)'). The header and the cells never get narrower than it:
+   * the other columns give up their room first, and when the minimums add up
+   * to more than the table, the rows overflow their container.
+   */
+  minWidth?: string;
 
   /**
    * Optional alignment of the content within the column.
@@ -344,13 +356,18 @@ export const Table = <T,>({
             key={`d-${d_idx}-c-${c_idx}`}
             style={{
               width: getColumnWidth(c),
+              minWidth: c.minWidth,
               display: 'flex',
               flexDirection: 'row',
+              justifyContent: getColumnAlignment(c),
               alignItems: 'center',
             }}
           >
+            {/* minWidth 0 lets a cell wider than its column end in "…"
+                instead of spilling over the next one. */}
             <div
               style={{
+                minWidth: 0,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
                 whiteSpace: 'nowrap',
@@ -497,13 +514,16 @@ export const Table = <T,>({
           width: '100%',
           display: 'flex',
           flexDirection: 'row',
-          padding: rowPadding ?? '0 0 16px 0',
+          // The rows have 8px on each side (p-8): the header keeps them so
+          // its columns line up with the cells.
+          padding: rowPadding ?? '0 8px 16px',
         }}
       >
         {columns.map((c) => (
           <div
             style={{
               width: getColumnWidth(c),
+              minWidth: c.minWidth,
               display: 'flex',
               flexDirection: 'row',
               justifyContent: getColumnAlignment(c),

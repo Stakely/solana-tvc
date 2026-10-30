@@ -1,7 +1,20 @@
 import { DomainError } from '@/core/arch';
+import { OrderCriteria } from '@/types/snapshot.ts';
+
+const CRITERIA: readonly OrderCriteria[] = [
+  'stake',
+  'inclusion',
+  'epochRatio',
+  'commission',
+  'version',
+  'missed',
+  'lastVote',
+  'skipRate',
+  'name',
+];
 
 export type SnapshotQueryOrder = {
-  criteria: 'credits' | 'commission' | 'version';
+  criteria: OrderCriteria;
   direction: 'asc' | 'desc';
 };
 export type SnapshotQueryFilter = {
@@ -10,18 +23,14 @@ export type SnapshotQueryFilter = {
 export class SnapshotQueryArgs {
   constructor(
     private readonly _order: SnapshotQueryOrder = {
-      criteria: 'credits',
-      direction: 'asc',
+      criteria: 'stake',
+      direction: 'desc',
     },
     private readonly _size: number = 15,
     private readonly _page: number = 1,
     private readonly _filter: SnapshotQueryFilter | undefined = undefined
   ) {
-    if (
-      _order.criteria !== 'credits' &&
-      _order.criteria !== 'version' &&
-      _order.criteria !== 'commission'
-    ) {
+    if (!CRITERIA.includes(_order.criteria)) {
       throw new DomainError('Invalid order criteria', {
         order: _order.criteria,
       });

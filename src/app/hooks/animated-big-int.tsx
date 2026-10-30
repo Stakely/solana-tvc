@@ -19,6 +19,11 @@ export function useAnimatedBigInt(target: string, durationMs = 650) {
     const to = toBigIntSafe(target);
 
     if (from === to) return;
+    // The first reading is shown as is, not counted up from zero.
+    if (from === 0n) {
+      setValue(to.toString());
+      return;
+    }
 
     const start = performance.now();
     const SCALE = 1_000_000n;

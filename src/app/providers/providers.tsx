@@ -1,9 +1,10 @@
 'use client';
 
-import { DataProvider } from '@/app/providers/data.tsx';
 import { AnalyticsProvider } from '@/app/hooks';
 import { ThemeProvider } from '@/app/components/theme/theme-provider.tsx';
 
+// Theme and analytics for every page. The data polling (DataProvider) wraps
+// only the home page, so How we measure does not poll the API.
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <ThemeProvider
@@ -27,9 +28,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         },
       }}
     >
-      <AnalyticsProvider>
-        <DataProvider>{children}</DataProvider>
-      </AnalyticsProvider>
+      <AnalyticsProvider>{children}</AnalyticsProvider>
     </ThemeProvider>
   );
 }

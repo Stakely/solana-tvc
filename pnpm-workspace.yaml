@@ -19,3 +19,7 @@ overrides:
   # pulls sprintf-js (GHSA-hp3w-g68c-fv3c, no patched release). It only calls
   # load(), which js-yaml 4 keeps with the same signature.
   '@istanbuljs/load-nyc-config>js-yaml': 4.3.2
+  # Dev-only: glob and minimatch fixes exist only in newer majors than jest and
+  # typescript-estree ask for, so these cross a major version on purpose.
+  "glob@>=9 <14.0.2": "14.0.3"
+  "minimatch@>=7 <11.0.1": "11.0.3"

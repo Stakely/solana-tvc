@@ -1,8 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
-FROM node:24-bookworm-slim AS base
+FROM node:26-trixie-slim AS base
 
-ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 ENV CI=true
 
 ARG RPC_URLS
@@ -19,7 +18,7 @@ ENV VALIDATOR_INFO_FILE_TTL=$VALIDATOR_INFO_FILE_TTL
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     bash curl ca-certificates bzip2 xz-utils \
-    libssl3 libudev1 libc6 \
+    libssl3t64 libudev1 libc6 \
     tini \
     git openssh-client \
   && rm -rf /var/lib/apt/lists/*
@@ -32,8 +31,9 @@ ENV PATH="/root/.local/share/solana/install/active_release/bin:${PATH}"
 RUN ln -sf /root/.local/share/solana/install/active_release/bin/solana /usr/local/bin/solana \
  && solana --version
 
-RUN corepack enable \
-  && corepack prepare pnpm@11.1.2 --activate \
+# Node 25+ no longer ships corepack, so pnpm is installed with npm. Keep the
+# version in sync with packageManager in package.json.
+RUN npm install -g pnpm@11.1.2 \
   && pnpm --version
 # ---------------- deps ----------------
 FROM base AS deps
@@ -47,7 +47,6 @@ RUN pnpm install --frozen-lockfile
 # ---------------- builder ----------------
 FROM base AS builder
 WORKDIR /app
-RUN corepack enable
 
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
